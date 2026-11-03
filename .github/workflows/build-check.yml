@@ -33,12 +33,7 @@ jobs:
         run: |
           if ! ./gradlew -p gradle/build-config-tests check --no-configuration-cache --stacktrace > /tmp/streamflix-build-config.log 2>&1; then
             cat /tmp/streamflix-build-config.log
-            python3 - <<'PY' > /tmp/streamflix-build-config-error.txt
-            from pathlib import Path
-            from urllib.parse import quote
-            text = '\n'.join(Path('/tmp/streamflix-build-config.log').read_text().splitlines()[-45:])
-            print('::error title=Build configuration tests::' + quote(text, safe=''))
-            PY
+            python3 -c 'from pathlib import Path; from urllib.parse import quote; text = "\n".join(Path("/tmp/streamflix-build-config.log").read_text().splitlines()[-45:]); print("::error title=Build configuration tests::" + quote(text, safe=""))' > /tmp/streamflix-build-config-error.txt
             cat /tmp/streamflix-build-config-error.txt
             exit 1
           fi
