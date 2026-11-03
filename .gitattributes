@@ -1,0 +1,4 @@
+# Keep the Unix wrapper usable after a checkout on Windows.
+gradlew text eol=lf
+gradlew.bat text eol=crlf
+*.jar binary

@@ -34,12 +34,16 @@ open class RabbitstreamExtractor : Extractor() {
     protected open val key = "https://keys4.fun"
 
     override suspend fun extract(link: String): Video {
+        val sourceApi = BuildConfig.RABBITSTREAM_SOURCE_API
+        check(sourceApi.isNotBlank()) {
+            "Rabbitstream is not configured: set RABBITSTREAM_SOURCE_API before building."
+        }
         val service = Service.build(mainUrl)
 
         val sourceId = link.substringAfterLast("/").substringBefore("?")
 
         val response = service.getSources(
-            url = BuildConfig.RABBITSTREAM_SOURCE_API + sourceId,
+            url = sourceApi + sourceId,
         )
 
         val sources = when (response) {

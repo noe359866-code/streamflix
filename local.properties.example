@@ -1,0 +1,14 @@
+# Optional: copy to local.properties only if you want file-based configuration.
+# local.properties is ignored by Git. Never commit real API keys.
+# Android Studio may add sdk.dir here; alternatively set ANDROID_HOME.
+
+# universal (default), mobile, or tv. Command-line properties and environment
+# variables take precedence over this file. See README.md for the full order.
+# APP_LAYOUT=universal
+
+# Optional service credentials. Missing values default to empty strings.
+# TMDB_API_KEY=
+# SUBDL_API_KEY=
+
+# Optional Rabbitstream sources endpoint prefix, including its trailing slash.
+# RABBITSTREAM_SOURCE_API=

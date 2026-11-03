@@ -73,14 +73,15 @@ object SubDL {
         subsPerPage: Int = 30,
     ): List<Subtitle> {
         
-        // If no API key is configured, do not search
-        if (UserPreferences.subdlApiKey.isEmpty()) {
+        // A user-provided key takes precedence over the optional build-time key.
+        val apiKey = UserPreferences.subdlApiKey.ifEmpty { BuildConfig.SUBDL_API_KEY }
+        if (apiKey.isEmpty()) {
             return emptyList()
         }
-        
+
         return try {
             val response = service.search(
-                apiKey = UserPreferences.subdlApiKey,
+                apiKey = apiKey,
                 filmName = filmName,
                 seasonNumber = seasonNumber,
                 episodeNumber = episodeNumber,

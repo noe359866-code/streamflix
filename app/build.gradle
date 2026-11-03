@@ -7,24 +7,26 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.serialization'
 }
 
-android {
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-        coreLibraryDesugaringEnabled true
-    }
-}
+apply from: rootProject.file('gradle/build-config.gradle')
 
-dependencies {
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+// Reading through providers makes changes to this optional file visible to
+// Gradle's configuration cache. SDK discovery remains the Android plugin's job.
+def localProperties = new Properties()
+def localPropertiesText = providers.fileContents(
+    rootProject.layout.projectDirectory.file('local.properties')
+).asText.getOrElse('')
+localProperties.load(new StringReader(localPropertiesText))
+
+def streamflixConfig = resolveStreamflixBuildConfig { name ->
+    providers.gradleProperty(name)
+        .orElse(providers.environmentVariable(name))
+        .orElse(providers.provider { localProperties.getProperty(name) })
+        .orNull
 }
 
 android {
     namespace 'com.streamflixreborn.streamflix'
     compileSdk 36
-
-    def properties = new Properties()
-    properties.load(project.rootProject.file('local.properties').newDataInputStream())
 
     defaultConfig {
         applicationId "com.streamflixreborn.streamflix"
@@ -33,28 +35,24 @@ android {
         versionCode 145
         versionName "1.7.116"
 
-        buildConfigField "String", "APP_LAYOUT", "\"${properties.getProperty("APP_LAYOUT")}\""
-        buildConfigField "String", "TMDB_API_KEY", "\"${properties.getProperty("TMDB_API_KEY")}\""
-        buildConfigField "String", "SUBDL_API_KEY", "\"${properties.getProperty("SUBDL_API_KEY")}\""
-        buildConfigField "String", "RABBITSTREAM_SOURCE_API", "\"${properties.getProperty("RABBITSTREAM_SOURCE_API")}\""
+        streamflixConfig.buildConfigFields.each { name, value ->
+            buildConfigField "String", name, value
+        }
     }
 
     sourceSets {
         main {
-            def appLayout = properties.getProperty("APP_LAYOUT")
-            if (appLayout == "mobile") {
-                manifest.srcFile "${project.rootDir}/app/src/main/mobile/AndroidManifest.xml"
-            } else if (appLayout == "tv") {
-                manifest.srcFile "${project.rootDir}/app/src/main/tv/AndroidManifest.xml"
-            } else {
-                manifest.srcFile "${project.rootDir}/app/src/main/AndroidManifest.xml"
-            }
+            def manifestDirectory = streamflixConfig.appLayout == 'universal'
+                ? 'main'
+                : "main/${streamflixConfig.appLayout}"
+            manifest.srcFile "src/${manifestDirectory}/AndroidManifest.xml"
         }
     }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
     }
     kotlinOptions {
         jvmTarget = '17'
@@ -79,6 +77,8 @@ android {
 }
 
 dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+
     implementation 'androidx.media3:media3-datasource-okhttp:1.8.0'
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
@@ -134,4 +134,17 @@ dependencies {
 
 ksp {
     arg("com.bumptech.glide.GlideModule", "AppGlideModule")
+}
+
+def configuredLayout = streamflixConfig.appLayout
+def configuredSettings = streamflixConfig.configuredSettings
+tasks.register('printBuildConfiguration') {
+    group = 'help'
+    description = 'Prints the selected layout and configuration availability without exposing secrets.'
+    doLast {
+        println "APP_LAYOUT=${configuredLayout}"
+        configuredSettings.each { name, configured ->
+            println "${name}=${configured ? 'configured' : 'not configured'}"
+        }
+    }
 }

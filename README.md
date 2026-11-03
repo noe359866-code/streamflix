@@ -82,23 +82,102 @@ The interface aggregates content from multiple sources and provides a convenient
 
 ### Prerequisites
 
-Install [Android Studio](https://developer.android.com/studio)
+- **JDK 17 or 21**. The project uses Gradle 8.14 through the included wrapper; a separate Gradle installation is not needed.
+- **Android Studio** with its SDK Manager, or an Android SDK command-line installation.
+- **Android SDK Platform 36** and the SDK Platform Tools. Install the Build Tools version requested by the Android Gradle plugin if the build asks for it.
+
+With Android Studio, install the SDK from **Settings → Languages & Frameworks → Android SDK**. For a terminal-only setup, set `ANDROID_HOME` to your SDK directory, or let Android Studio add `sdk.dir` to `local.properties`.
 
 ### Setup
 
-1. Clone the project to your local machine
+1. Clone and open the project:
 
 ```bash
 git clone https://github.com/streamflix-reborn/streamflix.git
+cd streamflix
 ```
 
-2. Open the project in Android Studio
+2. Open this directory in Android Studio and let it sync, or build directly from the terminal:
 
-## Development
+```bash
+# macOS / Linux
+./gradlew :app:assembleDebug
 
-1. Select the device that you want to run the app
+# Windows PowerShell
+.\gradlew.bat :app:assembleDebug
+```
 
-2. Click **Run**
+**No `local.properties` file or service credentials are required to configure and build the app.** Missing optional settings become empty strings, never the literal string `null`. Features that require a service still need their corresponding configuration at runtime; a successful build does not enable those services.
+
+The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. In Android Studio, you can also select a device and click **Run**.
+
+### Build configuration
+
+Configuration is resolved in this order, from highest to lowest priority:
+
+1. Gradle properties: `-PAPP_LAYOUT=mobile`, `gradle.properties`, or `ORG_GRADLE_PROJECT_APP_LAYOUT=mobile`.
+2. Environment variables: `APP_LAYOUT=mobile`.
+3. The optional root `local.properties` file.
+4. Defaults: `APP_LAYOUT=universal`; all optional service settings are empty.
+
+An explicitly empty Gradle property overrides lower-priority sources. An empty or missing layout selects `universal`. Other invalid layout values fail configuration with an actionable error instead of silently selecting a different manifest.
+
+For file-based configuration, copy the included template. Keep real credentials out of Git:
+
+```bash
+# macOS / Linux
+cp local.properties.example local.properties
+
+# Windows PowerShell
+Copy-Item local.properties.example local.properties
+```
+
+| Setting | Purpose |
+| --- | --- |
+| `APP_LAYOUT` | `universal` (mobile and TV launchers), `mobile`, or `tv`. |
+| `TMDB_API_KEY` | Optional default TMDb key; a key entered in app settings takes precedence. |
+| `SUBDL_API_KEY` | Optional default SubDL key; a key entered in app settings takes precedence. |
+| `RABBITSTREAM_SOURCE_API` | Optional Rabbitstream sources endpoint prefix, including its trailing slash. Without it, that extractor reports a configuration error. |
+
+BuildConfig values are packaged into the APK and **are not secret storage**. Do not use privileged server credentials here.
+
+To inspect the selected configuration without printing any keys:
+
+```bash
+./gradlew :app:printBuildConfiguration
+```
+
+### Development
+
+Build a specific layout with the same property locally and in CI:
+
+```bash
+./gradlew -PAPP_LAYOUT=universal :app:assembleDebug
+./gradlew -PAPP_LAYOUT=mobile :app:assembleDebug
+./gradlew -PAPP_LAYOUT=tv :app:assembleDebug
+```
+
+When switching layouts in an existing checkout, use `clean` to remove the previous layout's outputs:
+
+```bash
+./gradlew clean :app:assembleRelease -PAPP_LAYOUT=tv
+```
+
+Release builds are written to `app/build/outputs/apk/release/` and must be signed before installation. CI builds each release layout in a separate job and publishes these names:
+
+- Universal: `streamflix-<tag>.apk`
+- Mobile: `streamflix-<tag>-mobile.apk`
+- TV: `streamflix-<tag>-tv.apk`
+
+These suffixes match the in-app updater. Publishing requires the `KEYSTORE`, `SIGNING_KEY_ALIAS`, `SIGNING_STORE_PASSWORD`, and `SIGNING_KEY_PASSWORD` repository secrets. Service settings can be supplied through the corresponding repository secrets and are passed as environment variables, not written to files.
+
+Run the dependency-free build-configuration regression checks with:
+
+```bash
+./gradlew -p gradle/build-config-tests check --no-configuration-cache
+```
+
+The **Build check** workflow runs these checks and builds all three debug layouts on pull requests, pushes to `main`/`arena/**`, and manual dispatch. It does not need signing or service secrets.
 
 ## Contributing
 

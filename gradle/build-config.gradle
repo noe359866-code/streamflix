@@ -1,0 +1,44 @@
+import groovy.json.JsonOutput
+
+/**
+ * Resolves the app's build-time settings without requiring a local.properties file.
+ * The caller supplies a lookup with this precedence:
+ * Gradle properties (-P / ORG_GRADLE_PROJECT_*) > environment > local.properties.
+ *
+ * Keep this script independent of the Android plugin so it can be tested without
+ * downloading the Android SDK or any application dependencies.
+ */
+ext.resolveStreamflixBuildConfig = { Closure lookup ->
+    def valueOf = { String name, String fallback = "" ->
+        def value = lookup(name)
+        value == null ? fallback : value.toString().trim()
+    }
+    def appLayout = valueOf("APP_LAYOUT", "universal") ?: "universal"
+    def supportedLayouts = ["universal", "mobile", "tv"]
+    if (!supportedLayouts.contains(appLayout)) {
+        throw new GradleException(
+            "Invalid APP_LAYOUT '${appLayout}'. Use universal, mobile or tv."
+        )
+    }
+
+    def optionalSettings = [
+        "TMDB_API_KEY",
+        "SUBDL_API_KEY",
+        "RABBITSTREAM_SOURCE_API",
+    ]
+    def fields = [APP_LAYOUT: appLayout]
+    optionalSettings.each { name -> fields[name] = valueOf(name) }
+
+    return [
+        appLayout: appLayout,
+        // JSON string escaping is also valid Java source escaping. Never interpolate
+        // an unescaped property into generated BuildConfig source.
+        buildConfigFields: fields.collectEntries { name, value ->
+            [name, JsonOutput.toJson(value)]
+        },
+        // Safe to print in CI: report availability, never secret values.
+        configuredSettings: optionalSettings.collectEntries { name ->
+            [name, !fields[name].isEmpty()]
+        },
+    ]
+}

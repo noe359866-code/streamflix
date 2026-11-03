@@ -5,32 +5,69 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  build-and-release:
-    name: Build & Release APK
+  build:
+    name: Release APK (${{ matrix.layout }})
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - layout: universal
+            suffix: ''
+          - layout: mobile
+            suffix: '-mobile'
+          - layout: tv
+            suffix: '-tv'
+    env:
+      APP_LAYOUT: ${{ matrix.layout }}
+      TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+      SUBDL_API_KEY: ${{ secrets.SUBDL_API_KEY }}
+      RABBITSTREAM_SOURCE_API: ${{ secrets.RABBITSTREAM_SOURCE_API }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
-
-      - name: Setup JDK environment
-        uses: actions/setup-java@v1
+        uses: actions/checkout@v4
         with:
-          java-version: 17
+          persist-credentials: false
 
-      - name: Access Secrets
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Check signing configuration
         env:
-          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
-          RABBITSTREAM_SOURCE_API: ${{ secrets.RABBITSTREAM_SOURCE_API }}
+          KEYSTORE: ${{ secrets.KEYSTORE }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          echo TMDB_API_KEY=$TMDB_API_KEY >> local.properties
-          echo RABBITSTREAM_SOURCE_API=$RABBITSTREAM_SOURCE_API >> local.properties
+          for name in KEYSTORE SIGNING_KEY_ALIAS SIGNING_STORE_PASSWORD SIGNING_KEY_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Required release signing secret ${name} is not configured."
+              exit 1
+            fi
+          done
 
-      - name: Make Gradle executable
-        run: chmod +x ./gradlew
+      - name: Show non-secret build configuration
+        run: ./gradlew :app:printBuildConfiguration
 
+      # Each layout runs on a fresh checkout. No local.properties mutations and
+      # no release directory shared with another layout.
       - name: Build APK
-        run: ./gradlew assembleRelease --stacktrace
+        run: ./gradlew :app:assembleRelease --stacktrace
 
       - name: Sign APK
         id: sign_apk
@@ -42,83 +79,45 @@ jobs:
           keyStorePassword: ${{ secrets.SIGNING_STORE_PASSWORD }}
           keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
         env:
-          BUILD_TOOLS_VERSION: "34.0.0"
+          BUILD_TOOLS_VERSION: '34.0.0'
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Prepare release artifact
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-
-      - name: Upload Release APK
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.sign_apk.outputs.signedReleaseFile }}
-          asset_name: ${{ github.event.repository.name }}-${{ github.ref_name }}.apk
-          asset_content_type: application/zip
-
-
-      - name: Set Mobile version
+          SIGNED_APK: ${{ steps.sign_apk.outputs.signedReleaseFile }}
+          ASSET_NAME: ${{ github.event.repository.name }}-${{ github.ref_name }}${{ matrix.suffix }}.apk
         run: |
-          echo APP_LAYOUT=mobile >> local.properties
+          mkdir -p release-artifacts
+          cp "$SIGNED_APK" "release-artifacts/$ASSET_NAME"
 
-      - name: Build APK
-        run: ./gradlew assembleRelease --stacktrace
-
-      - name: Sign APK
-        id: sign_apk_mobile
-        uses: r0adkll/sign-android-release@v1
+      - name: Upload signed APK
+        uses: actions/upload-artifact@v4
         with:
-          releaseDirectory: app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.KEYSTORE }}
-          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: "34.0.0"
+          name: release-apk-${{ matrix.layout }}
+          path: release-artifacts/*.apk
+          if-no-files-found: error
+          retention-days: 7
 
-      - name: Upload Release APK
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      # Publish only after all three signed APKs have been built successfully.
+      - name: Download signed APKs
+        uses: actions/download-artifact@v4
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.sign_apk_mobile.outputs.signedReleaseFile }}
-          asset_name: ${{ github.event.repository.name }}-${{ github.ref_name }}-only-mobile.apk
-          asset_content_type: application/zip
+          pattern: release-apk-*
+          path: release-artifacts
+          merge-multiple: true
 
-
-      - name: Set TV version
+      - name: Create release with all layouts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          echo APP_LAYOUT=tv >> local.properties
-
-      - name: Build APK
-        run: ./gradlew assembleRelease --stacktrace
-
-      - name: Sign APK
-        id: sign_apk_tv
-        uses: r0adkll/sign-android-release@v1
-        with:
-          releaseDirectory: app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.KEYSTORE }}
-          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: "34.0.0"
-
-      - name: Upload Release APK
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.sign_apk_tv.outputs.signedReleaseFile }}
-          asset_name: ${{ github.event.repository.name }}-${{ github.ref_name }}-only-tv.apk
-          asset_content_type: application/zip
+          gh release create "$GITHUB_REF_NAME" release-artifacts/*.apk \
+            --title "Release $GITHUB_REF_NAME" \
+            --generate-notes
