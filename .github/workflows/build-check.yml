@@ -21,16 +21,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - name: Test configuration without Android SDK or local.properties
-        run: ./gradlew -p gradle/build-config-tests check --no-configuration-cache --stacktrace
+        run: |
+          if ! ./gradlew -p gradle/build-config-tests check --no-configuration-cache --stacktrace > /tmp/streamflix-build-config.log 2>&1; then
+            cat /tmp/streamflix-build-config.log
+            python3 - <<'PY'
+            from pathlib import Path
+            from urllib.parse import quote
+            text = '\n'.join(Path('/tmp/streamflix-build-config.log').read_text().splitlines()[-65:])
+            print('::error title=Build configuration tests::' + quote(text, safe=''))
+            PY
+            exit 1
+          fi
+          cat /tmp/streamflix-build-config.log
 
   build:
     name: Debug APK (${{ matrix.layout }})
@@ -44,14 +55,14 @@ jobs:
     env:
       APP_LAYOUT: ${{ matrix.layout }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - name: Show non-secret build configuration
         run: ./gradlew :app:printBuildConfiguration
       - name: Build from a clean checkout without service credentials
