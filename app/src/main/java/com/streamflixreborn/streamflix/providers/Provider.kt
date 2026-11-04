@@ -108,11 +108,15 @@ interface Provider {
             TvLibrefutbolProvider to ProviderSupport(movies = false, tvShows = true),
             PlutoTvEsProvider to ProviderSupport(movies = false, tvShows = true),
             PlutoTvMxProvider to ProviderSupport(movies = false, tvShows = true),
+            PlutoTvArProvider to ProviderSupport(movies = false, tvShows = true),
             PelotaLibreTvHdProvider to ProviderSupport(movies = false, tvShows = true),
             FanpelisProvider to ProviderSupport(movies = true, tvShows = true),
             JKAnimeProvider to ProviderSupport(movies = false, tvShows = true),
             TioAnimeProvider to ProviderSupport(movies = false, tvShows = true),
             PelisflixHdProvider to ProviderSupport(movies = true, tvShows = true),
+            SeriesTurcasProvider to ProviderSupport(movies = false, tvShows = true),
+            CineHaxProvider to ProviderSupport(movies = true, tvShows = true),
+            MagisTvProvider to ProviderSupport(movies = false, tvShows = true),
             StremioCatalogsProvider to ProviderSupport(movies = true, tvShows = true),
         )
 
