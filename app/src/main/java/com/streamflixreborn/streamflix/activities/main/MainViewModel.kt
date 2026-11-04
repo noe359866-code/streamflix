@@ -5,7 +5,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.streamflixreborn.streamflix.BuildConfig
+import com.streamflixreborn.streamflix.utils.TvUpdatePolicy
 import com.streamflixreborn.streamflix.utils.GitHub
 import com.streamflixreborn.streamflix.utils.InAppUpdater
 import kotlinx.coroutines.Dispatchers
@@ -42,14 +42,7 @@ class MainViewModel : ViewModel() {
             if (newReleases.isEmpty()) return@launch
 
             val asset = newReleases.first().assets
-                .filter { it.contentType == "application/vnd.android.package-archive" }
-                .find {
-                    when (BuildConfig.APP_LAYOUT) {
-                        "mobile" -> it.name.endsWith("-mobile.apk")
-                        "tv" -> it.name.endsWith("-tv.apk")
-                        else -> !it.name.endsWith("-mobile.apk") && !it.name.endsWith("-tv.apk")
-                    }
-                }
+                .find { TvUpdatePolicy.isTvUpdate(it.name, it.contentType) }
                 ?: throw Exception("Can't find update APK")
 
             _state.emit(State.SuccessCheckingUpdate(newReleases, asset))

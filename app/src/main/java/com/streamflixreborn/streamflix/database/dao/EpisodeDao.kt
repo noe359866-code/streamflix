@@ -111,9 +111,11 @@ interface EpisodeDao {
         val provider = UserPreferences.currentProvider?.name ?: "Unknown"
         val existing = getById(episode.id)
         if (existing != null) {
-            existing.merge(episode)
-            update(existing)
-            Log.d("DatabaseVerify", "[$provider] REAL-TIME UPDATE Episode: ${existing.title} (Watched: ${existing.isWatched}, Hist: ${existing.watchHistory != null})")
+            // Catalog refreshes often omit local watch state. Merge the stored
+            // state into the fresh item, just like MovieDao.save does.
+            episode.merge(existing)
+            update(episode)
+            Log.d("DatabaseVerify", "[$provider] REAL-TIME UPDATE Episode: ${episode.title} (Watched: ${episode.isWatched}, Hist: ${episode.watchHistory != null})")
         } else {
             insert(episode)
             Log.d("DatabaseVerify", "[$provider] REAL-TIME INSERT Episode: ${episode.id} (Watched: ${episode.isWatched})")

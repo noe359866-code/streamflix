@@ -5,7 +5,7 @@
   <br />
   <strong>🔄 Reborn Version</strong> - Community continuation of the original Streamflix project
   <br />
-  An open-source Android TV and mobile app for educational streaming interface, made with Android Studio, in Kotlin
+  An open-source Android TV app for educational streaming interface, made with Android Studio, in Kotlin
   <br />
   <a href="https://github.com/streamflix-reborn/streamflix/releases/latest">
     <strong>Download app »</strong>
@@ -49,7 +49,7 @@
 - **Enhanced Support**: Continued development and bug fixes by an independent developer
 - **Respectful Fork**: Built with full respect for the original creator's work
 
-Streamflix Reborn is an open-source Android TV and mobile app that provides a user interface for accessing publicly available streaming content from various third-party providers.
+Streamflix Reborn is an open-source Android TV app that provides a user interface for accessing publicly available streaming content from various third-party providers.
 
 This app is designed for educational purposes and personal use only. Users are responsible for ensuring they have proper authorization to access any content they view through this application.
 
@@ -113,14 +113,16 @@ The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. In Andr
 
 ### Build configuration
 
+This project supports **Android TV only**. There is one manifest, one debug build and one release asset. Legacy mobile source remains temporarily where shared code still references it, but mobile/universal APKs and launchers are no longer produced. `APP_LAYOUT` defaults to `tv`; explicitly selecting `mobile` or `universal` fails configuration.
+
 Configuration is resolved in this order, from highest to lowest priority:
 
-1. Gradle properties: `-PAPP_LAYOUT=mobile`, `gradle.properties`, or `ORG_GRADLE_PROJECT_APP_LAYOUT=mobile`.
-2. Environment variables: `APP_LAYOUT=mobile`.
+1. Gradle properties: `-PAPP_LAYOUT=tv`, `gradle.properties`, or `ORG_GRADLE_PROJECT_APP_LAYOUT=tv`.
+2. Environment variables: `APP_LAYOUT=tv`.
 3. The optional root `local.properties` file.
-4. Defaults: `APP_LAYOUT=universal`; all optional service settings are empty.
+4. Defaults: `APP_LAYOUT=tv`; all optional service settings are empty.
 
-An explicitly empty Gradle property overrides lower-priority sources. An empty or missing layout selects `universal`. Other invalid layout values fail configuration with an actionable error instead of silently selecting a different manifest.
+An explicitly empty or missing layout selects `tv`. Other values fail with an actionable error.
 
 For file-based configuration, copy the included template. Keep real credentials out of Git:
 
@@ -134,7 +136,7 @@ Copy-Item local.properties.example local.properties
 
 | Setting | Purpose |
 | --- | --- |
-| `APP_LAYOUT` | `universal` (mobile and TV launchers), `mobile`, or `tv`. |
+| `APP_LAYOUT` | `tv` only; normally omit it. |
 | `TMDB_API_KEY` | Optional default TMDb key; a key entered in app settings takes precedence. |
 | `SUBDL_API_KEY` | Optional default SubDL key; a key entered in app settings takes precedence. |
 | `RABBITSTREAM_SOURCE_API` | Optional Rabbitstream sources endpoint prefix, including its trailing slash. Without it, that extractor reports a configuration error. |
@@ -147,91 +149,28 @@ To inspect the selected configuration without printing any keys:
 ./gradlew :app:printBuildConfiguration
 ```
 
-### Development
-
-Build a specific layout with the same property locally and in CI:
+### Development and automated tests
 
 ```bash
-./gradlew -PAPP_LAYOUT=universal :app:assembleDebug
-./gradlew -PAPP_LAYOUT=mobile :app:assembleDebug
-./gradlew -PAPP_LAYOUT=tv :app:assembleDebug
-```
+# Offline policy/parser tests and the single Android TV debug APK
+./gradlew :app:testDebugUnitTest :app:assembleDebug
 
-When switching layouts in an existing checkout, use `clean` to remove the previous layout's outputs:
-
-```bash
-./gradlew clean :app:assembleRelease -PAPP_LAYOUT=tv
-```
-
-Release builds are written to `app/build/outputs/apk/release/` and must be signed before installation. CI builds each release layout in a separate job and publishes these names:
-
-- Universal: `streamflix-<tag>.apk`
-- Mobile: `streamflix-<tag>-mobile.apk`
-- TV: `streamflix-<tag>-tv.apk`
-
-These suffixes match the in-app updater. Publishing requires the `KEYSTORE`, `SIGNING_KEY_ALIAS`, `SIGNING_STORE_PASSWORD`, and `SIGNING_KEY_PASSWORD` repository secrets. Service settings can be supplied through the corresponding repository secrets and are passed as environment variables, not written to files.
-
-Run the dependency-free build-configuration regression checks with:
-
-```bash
+# Dependency-free build configuration and manifest checks
 ./gradlew -p gradle/build-config-tests check --no-configuration-cache
+
+# Instrumentation on a connected Android TV device or TV emulator
+./gradlew :app:connectedDebugAndroidTest
+
+# Release build (sign before installing)
+./gradlew clean :app:assembleRelease
 ```
 
-The **Build check** workflow runs these checks and builds all three debug layouts on pull requests, pushes to `main`/`arena/**`, and manual dispatch. It does not need signing or service secrets.
+Instrumentation covers real Room/SQLite persistence across database reopen, the TV manifest and launcher, provider-screen D-pad focus, and the real `PlayerTvView` with a simulated Media3 player. Playback, IPTV parsing, subtitle selection and TV update selection also have deterministic offline unit tests. These tests do not certify third-party stream availability or replace testing on physical TV hardware.
 
-## Contributing
+Release output is `app/build/outputs/apk/release/`. CI publishes only `streamflix-<tag>-tv.apk`.
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+This suffix matches the TV-only in-app updater. Publishing requires the `KEYSTORE`, `SIGNING_KEY_ALIAS`, `SIGNING_STORE_PASSWORD`, and `SIGNING_KEY_PASSWORD` repository secrets. Service settings can be supplied through the corresponding repository secrets and are passed as environment variables, not written to files.
 
-1. Fork the project
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a pull request
+The **Android TV quality** workflow runs configuration checks, offline unit tests, a TV debug build, and instrumentation on an API 29 Android TV emulator (`tv_1080p`, x86_64). It runs on pull requests, pushes to `main`/`arena/**`, and manual dispatch. The release workflow reuses this quality gate before signing or publishing; a failed test blocks publication. CI needs no signing or service secrets for the quality checks.
 
-## Legal Disclaimer
-
-**IMPORTANT: This application is for educational and personal use only.**
-
-- Streamflix does not host, store, or distribute any copyrighted content
-- All content is sourced from third-party providers and websites
-- Users are solely responsible for ensuring they have legal rights to access any content
-- The developers do not endorse or encourage copyright infringement
-- Users must comply with all applicable laws in their jurisdiction
-- Any legal issues should be directed to the actual content providers
-- This app functions as a search engine aggregator only
-- No copyrighted material is stored on our servers
-
-## Legal Notice
-
-This application is provided "as is" for educational purposes. The developers:
-- Do not claim ownership of any content
-- Do not profit from copyrighted material
-- Do not control third-party content providers
-- Encourage users to support content creators through legal means
-- Recommend using official streaming services when available
-
-## Credits & Authors
-
-### Original Creator
-- **[Lory-Stan TANASI](https://github.com/stantanasi)** - Original Streamflix project creator
-
-### Reborn Development
-- **Independent Developer** - Streamflix Reborn maintainer
-- **Special thanks** to the original creator for the excellent foundation
-
-## License
-
-This project is licensed under the `Apache-2.0` License - see the [LICENSE](LICENSE) file for details
-
-### Original Project
-<p align="center">
-  <br />
-  © 2022 Lory-Stan TANASI. All rights reserved
-</p>
-
-### Reborn Project
-<p align="center">
-  <br />
-  © 2025 Streamflix Reborn. Built with respect for the original work.
-</p>
+See [`docs/testing-tv.md`](docs/testing-tv.md) for scope, local emulator setup and troubleshooting.

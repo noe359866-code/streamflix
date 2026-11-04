@@ -13,11 +13,10 @@ ext.resolveStreamflixBuildConfig = { Closure lookup ->
         def value = lookup(name)
         value == null ? fallback : value.toString().trim()
     }
-    def appLayout = valueOf("APP_LAYOUT", "universal") ?: "universal"
-    def supportedLayouts = ["universal", "mobile", "tv"]
-    if (!supportedLayouts.contains(appLayout)) {
+    def appLayout = valueOf("APP_LAYOUT", "tv") ?: "tv"
+    if (appLayout != "tv") {
         throw new GradleException(
-            "Invalid APP_LAYOUT '${appLayout}'. Use universal, mobile or tv."
+            "Invalid APP_LAYOUT '${appLayout}'. This project supports Android TV only; use tv or omit APP_LAYOUT."
         )
     }
 

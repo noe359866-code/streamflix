@@ -4,8 +4,11 @@ import android.util.Base64
 import android.util.Log
 import com.streamflixreborn.streamflix.adapters.AppAdapter
 import com.streamflixreborn.streamflix.models.*
+import com.streamflixreborn.streamflix.utils.M3uParser
 import okhttp3.*
 import java.util.concurrent.TimeUnit
+
+private typealias M3UChannel = M3uParser.Channel
 
 object IptvSpainProvider : Provider {
 
@@ -48,14 +51,6 @@ object IptvSpainProvider : Provider {
     private var lastFetchTime: Long = 0
     private const val CACHE_DURATION = 30 * 60 * 1000
 
-    data class M3UChannel(
-        val name: String,
-        val url: String,
-        val logo: String?,
-        val group: String?,
-        val userAgent: String? = null,
-        val referrer: String? = null
-    )
 
     private fun createId(channel: M3UChannel): String {
         val rawId = "${channel.url}|${channel.name}|${channel.logo ?: ""}|${channel.userAgent ?: ""}|${channel.referrer ?: ""}"
@@ -237,36 +232,7 @@ object IptvSpainProvider : Provider {
         )
     }
 
-    private fun parseM3U(m3uRaw: String): List<M3UChannel> {
-        val channels = mutableListOf<M3UChannel>()
-        val lines = m3uRaw.lines()
-
-        var curName = ""
-        var curLogo = ""
-        var curGroup = ""
-        var curUA: String? = null
-        var curRef: String? = null
-
-        for (line in lines) {
-            val t = line.trim()
-            if (t.startsWith("#EXTINF")) {
-                curName = t.substringAfterLast(",").trim()
-                curLogo = Regex("""tvg-logo="([^"]+)"""").find(t)?.groupValues?.get(1) ?: ""
-                curGroup = Regex("""group-title="([^"]+)"""").find(t)?.groupValues?.get(1) ?: ""
-                curUA = Regex("""http-user-agent="([^"]+)"""").find(t)?.groupValues?.get(1)
-                curRef = Regex("""http-referrer="([^"]+)"""").find(t)?.groupValues?.get(1)
-            } else if (t.startsWith("#EXTVLCOPT:")) {
-                if (t.contains("http-user-agent=")) curUA = t.substringAfter("http-user-agent=").trim()
-                if (t.contains("http-referrer=")) curRef = t.substringAfter("http-referrer=").trim()
-            } else if (t.startsWith("http")) {
-                if (curName.isNotEmpty()) {
-                    channels.add(M3UChannel(curName, t, curLogo, curGroup, curUA, curRef))
-                    curName = ""; curLogo = ""; curGroup = ""; curUA = null; curRef = null
-                }
-            }
-        }
-        return channels
-    }
+    private fun parseM3U(m3uRaw: String): List<M3UChannel> = M3uParser.parse(m3uRaw)
 
     override suspend fun getMovies(page: Int): List<Movie> = emptyList()
     override suspend fun getTvShows(page: Int): List<TvShow> {

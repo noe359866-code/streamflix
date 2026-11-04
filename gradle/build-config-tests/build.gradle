@@ -1,140 +1,83 @@
-// Run with: ./gradlew -p gradle/build-config-tests check --no-configuration-cache
-// This build intentionally has no plugins or external dependencies.
+// Dependency-free checks: ./gradlew -p gradle/build-config-tests check --no-configuration-cache
 apply from: '../build-config.gradle'
 
 def resolve = { Map layers = [:] ->
     resolveStreamflixBuildConfig { name ->
-        def sources = [layers.gradle, layers.environment, layers.local]
-        def source = sources.find { it != null && it.containsKey(name) }
+        def source = [layers.gradle, layers.environment, layers.local].find {
+            it != null && it.containsKey(name)
+        }
         source == null ? null : source[name]
     }
 }
 
 tasks.register('checkBuildConfiguration') {
     group = 'verification'
-    description = 'Checks layout selection, configuration precedence, defaults and escaping.'
-
+    description = 'Checks TV-only configuration, precedence, defaults and escaping.'
     doLast {
         def defaults = resolve()
-        assert defaults.appLayout == 'universal'
+        assert defaults.appLayout == 'tv'
         assert defaults.buildConfigFields == [
-            APP_LAYOUT: '"universal"',
-            TMDB_API_KEY: '""',
-            SUBDL_API_KEY: '""',
-            RABBITSTREAM_SOURCE_API: '""',
+            APP_LAYOUT: '"tv"', TMDB_API_KEY: '""', SUBDL_API_KEY: '""', RABBITSTREAM_SOURCE_API: '""',
         ]
         assert defaults.configuredSettings.values().every { !it }
-
-        ['universal', 'mobile', 'tv'].each { layout ->
-            assert resolve(local: [APP_LAYOUT: layout]).appLayout == layout
-        }
         assert resolve(local: [APP_LAYOUT: ' tv ']).appLayout == 'tv'
-        assert resolve(local: [APP_LAYOUT: '']).appLayout == 'universal'
-        assert resolve(local: [APP_LAYOUT: null]).appLayout == 'universal'
-
+        assert resolve(local: [APP_LAYOUT: '']).appLayout == 'tv'
+        assert resolve(local: [APP_LAYOUT: null]).appLayout == 'tv'
         def precedence = resolve(
-            gradle: [APP_LAYOUT: 'mobile', TMDB_API_KEY: 'gradle-key'],
-            environment: [APP_LAYOUT: 'tv', TMDB_API_KEY: 'environment-key'],
-            local: [APP_LAYOUT: 'universal', TMDB_API_KEY: 'local-key'],
+            gradle: [APP_LAYOUT: 'tv', TMDB_API_KEY: 'gradle-key'],
+            environment: [TMDB_API_KEY: 'environment-key'],
+            local: [TMDB_API_KEY: 'local-key'],
         )
-        assert precedence.appLayout == 'mobile'
         assert precedence.buildConfigFields.TMDB_API_KEY == '"gradle-key"'
-        def environment = resolve(
-            environment: [APP_LAYOUT: 'tv', SUBDL_API_KEY: 'environment-key'],
-            local: [APP_LAYOUT: 'mobile', SUBDL_API_KEY: 'local-key'],
-        )
-        assert environment.appLayout == 'tv'
-        assert environment.buildConfigFields.SUBDL_API_KEY == '"environment-key"'
+        assert resolve(environment: [SUBDL_API_KEY: 'environment-key'], local: [SUBDL_API_KEY: 'local-key'])
+            .buildConfigFields.SUBDL_API_KEY == '"environment-key"'
         assert resolve(gradle: [SUBDL_API_KEY: '']).buildConfigFields.SUBDL_API_KEY == '""'
-
-        ['desktop', 'TV', 'null', 'mobile,tv'].each { layout ->
+        ['desktop', 'TV', 'mobile', 'universal', 'mobile,tv'].each { layout ->
             def rejected = false
-            try {
-                resolve(local: [APP_LAYOUT: layout])
-            } catch (GradleException expected) {
-                rejected = expected.message.contains('APP_LAYOUT')
+            try { resolve(local: [APP_LAYOUT: layout]) }
+            catch (GradleException expected) {
+                rejected = expected.message.contains('Android TV only')
                 assert !expected.message.contains('API_KEY')
             }
             assert rejected: "APP_LAYOUT=${layout} should be rejected"
         }
-
-        def special = resolve(local: [
-            TMDB_API_KEY: 'a"b\\c\nd\te',
-            RABBITSTREAM_SOURCE_API: 'https://example.invalid/sources/',
-        ])
+        def special = resolve(local: [TMDB_API_KEY: 'a"b\\c\nd\te', RABBITSTREAM_SOURCE_API: 'https://example.invalid/sources/'])
         assert special.buildConfigFields.TMDB_API_KEY == '"a\\"b\\\\c\\nd\\te"'
         assert special.buildConfigFields.RABBITSTREAM_SOURCE_API == '"https://example.invalid/sources/"'
-        assert special.configuredSettings == [
-            TMDB_API_KEY: true,
-            SUBDL_API_KEY: false,
-            RABBITSTREAM_SOURCE_API: true,
-        ]
+        assert special.configuredSettings == [TMDB_API_KEY: true, SUBDL_API_KEY: false, RABBITSTREAM_SOURCE_API: true]
         assert !special.configuredSettings.toString().contains('example.invalid')
     }
 }
 
 tasks.register('checkLayoutManifests') {
     group = 'verification'
-    description = 'Checks that each layout exposes the correct launcher and the same external-player queries.'
-
+    description = 'Checks the single required-Leanback TV manifest and external-player queries.'
     doLast {
-        def manifests = ['universal', 'mobile', 'tv'].collectEntries { layout ->
-            def directory = layout == 'universal' ? 'main' : "main/${layout}"
-            def file = rootProject.file("../../app/src/${directory}/AndroidManifest.xml")
-            assert file.isFile(): "Missing manifest for ${layout}"
-            [layout, new XmlSlurper().parse(file)]
-        }
-        def launcherActivities = { manifest ->
-            manifest.application.activity.findAll { activity ->
-                activity.'intent-filter'.any { filter ->
-                    filter.action.any { it.@'android:name'.text() == 'android.intent.action.MAIN' } &&
-                        filter.category.any {
-                            def category = it.@'android:name'.text()
-                            category == 'android.intent.category.LAUNCHER' ||
-                                category == 'android.intent.category.LEANBACK_LAUNCHER'
-                        }
-                }
+        def file = rootProject.file('../../app/src/main/AndroidManifest.xml')
+        def manifest = new XmlParser(false, false).parse(file)
+        def android = '{http://schemas.android.com/apk/res/android}'
+        def features = manifest.children().findAll { it.name() == 'uses-feature' }
+        def leanback = features.find { it.attribute("${android}name") == 'android.software.leanback' }
+        assert leanback?.attribute("${android}required") == 'true'
+        def touchscreen = features.find { it.attribute("${android}name") == 'android.hardware.touchscreen' }
+        assert touchscreen?.attribute("${android}required") == 'false'
+        def activities = manifest.application.activity.findAll { activity ->
+            activity.'intent-filter'.any { filter ->
+                filter.action.any { it.attribute("${android}name") == 'android.intent.action.MAIN' } &&
+                    filter.category.any { it.attribute("${android}name") == 'android.intent.category.LEANBACK_LAUNCHER' }
             }
         }
-        assert launcherActivities(manifests.universal).size() == 2
-        assert launcherActivities(manifests.mobile).size() == 1
-        assert launcherActivities(manifests.mobile)[0].@'android:name'.text() == '.activities.main.MainMobileActivity'
-        assert launcherActivities(manifests.tv).size() == 1
-        assert launcherActivities(manifests.tv)[0].@'android:name'.text() == '.activities.main.MainTvActivity'
-        ['mobile', 'tv'].each { layout ->
-            def forbidden = layout == 'mobile'
-                ? 'android.intent.category.LEANBACK_LAUNCHER'
-                : 'android.intent.category.LAUNCHER'
-            assert launcherActivities(manifests[layout]).every { activity ->
-                activity.'intent-filter'.every { filter ->
-                    filter.category.every { it.@'android:name'.text() != forbidden }
-                }
-            }
+        assert activities.size() == 1
+        assert activities[0].attribute("${android}name") == '.activities.main.MainTvActivity'
+        assert manifest.depthFirst().every { node ->
+            !(node instanceof Node) || node.attribute("${android}name") != '.activities.main.MainMobileActivity'
         }
-
-        // XmlParser exposes concrete elements, including attributes on empty nodes.
-        // Compare structure rather than text: query intents contain no text.
-        def signature
-        signature = { node ->
-            [
-                node.name().toString(),
-                node.attributes().collectEntries { key, value ->
-                    [key.toString().tokenize(':').last(), value.toString()]
-                }.sort { it.key },
-                node.children().collect { child -> signature(child) },
-            ]
-        }
-        def querySignatures = ['universal', 'mobile', 'tv'].collectEntries { layout ->
-            def directory = layout == 'universal' ? 'main' : "main/${layout}"
-            def file = rootProject.file("../../app/src/${directory}/AndroidManifest.xml")
-            def document = new XmlParser(false, false).parse(file)
-            def queries = document.depthFirst().find { it.name() == 'queries' }
-            assert queries != null: "Missing queries for ${layout}"
-            [layout, signature(queries)]
-        }
-        assert querySignatures.universal[2].size() > 0
-        assert querySignatures.mobile == querySignatures.universal
-        assert querySignatures.tv == querySignatures.universal
+        assert manifest.application.attribute("${android}banner") == '@mipmap/ic_banner'
+        def queries = manifest.depthFirst().find { it instanceof Node && it.name() == 'queries' }
+        assert queries != null
+        assert queries.depthFirst().any { it instanceof Node && it.attribute("${android}mimeType") == 'video/*' }
+        assert !rootProject.file('../../app/src/main/mobile/AndroidManifest.xml').exists()
+        assert !rootProject.file('../../app/src/main/tv/AndroidManifest.xml').exists()
     }
 }
 

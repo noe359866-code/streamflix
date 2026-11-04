@@ -8,6 +8,7 @@ import androidx.media3.common.Player
 import androidx.media3.ui.PlayerControlView
 import androidx.media3.ui.PlayerView
 import com.streamflixreborn.streamflix.R
+import com.streamflixreborn.streamflix.utils.TvPlaybackPolicy
 import java.util.Locale
 
 class PlayerTvView @JvmOverloads constructor(
@@ -112,14 +113,14 @@ class PlayerTvView @JvmOverloads constructor(
         return when (event.keyCode) {
             KeyEvent.KEYCODE_DPAD_LEFT -> {
                 if (event.action == KeyEvent.ACTION_DOWN) {
-                    player.seekTo(player.currentPosition - 10_000)
+                    player.seekTo(TvPlaybackPolicy.seekTarget(player.currentPosition, -TvPlaybackPolicy.SEEK_STEP_MS, player.duration))
                 }
                 true
             }
 
             KeyEvent.KEYCODE_DPAD_RIGHT -> {
                 if (event.action == KeyEvent.ACTION_DOWN) {
-                    player.seekTo(player.currentPosition + 10_000)
+                    player.seekTo(TvPlaybackPolicy.seekTarget(player.currentPosition, TvPlaybackPolicy.SEEK_STEP_MS, player.duration))
                 }
                 true
             }

@@ -1,4 +1,4 @@
-name: Build & Release APK
+name: Build & Release Android TV APK
 
 on:
   push:
@@ -9,44 +9,33 @@ permissions:
   contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: tv-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
+  quality:
+    name: Required Android TV quality gate
+    uses: ./.github/workflows/build-check.yml
+
   build:
-    name: Release APK (${{ matrix.layout }})
-    runs-on: ubuntu-latest
+    name: Signed Android TV APK
+    needs: quality
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - layout: universal
-            suffix: ''
-          - layout: mobile
-            suffix: '-mobile'
-          - layout: tv
-            suffix: '-tv'
     env:
-      APP_LAYOUT: ${{ matrix.layout }}
+      APP_LAYOUT: tv
       TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
       SUBDL_API_KEY: ${{ secrets.SUBDL_API_KEY }}
       RABBITSTREAM_SOURCE_API: ${{ secrets.RABBITSTREAM_SOURCE_API }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-
-      - name: Setup JDK
-        uses: actions/setup-java@v6
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
-
+      - uses: gradle/actions/setup-gradle@v6
       - name: Check signing configuration
         env:
           KEYSTORE: ${{ secrets.KEYSTORE }}
@@ -60,15 +49,10 @@ jobs:
               exit 1
             fi
           done
-
       - name: Show non-secret build configuration
         run: ./gradlew :app:printBuildConfiguration
-
-      # Each layout runs on a fresh checkout. No local.properties mutations and
-      # no release directory shared with another layout.
-      - name: Build APK
+      - name: Build Android TV release
         run: ./gradlew :app:assembleRelease --stacktrace
-
       - name: Sign APK
         id: sign_apk
         uses: r0adkll/sign-android-release@v1
@@ -80,44 +64,37 @@ jobs:
           keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
         env:
           BUILD_TOOLS_VERSION: '34.0.0'
-
-      - name: Prepare release artifact
+      - name: Prepare the only supported release asset
         env:
           SIGNED_APK: ${{ steps.sign_apk.outputs.signedReleaseFile }}
-          ASSET_NAME: ${{ github.event.repository.name }}-${{ github.ref_name }}${{ matrix.suffix }}.apk
+          ASSET_NAME: ${{ github.event.repository.name }}-${{ github.ref_name }}-tv.apk
         run: |
           mkdir -p release-artifacts
           cp "$SIGNED_APK" "release-artifacts/$ASSET_NAME"
-
-      - name: Upload signed APK
-        uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v7
         with:
-          name: release-apk-${{ matrix.layout }}
+          name: release-apk-tv
           path: release-artifacts/*.apk
           if-no-files-found: error
           retention-days: 7
 
   release:
-    name: Publish release
+    name: Publish Android TV release
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write
     steps:
-      # Publish only after all three signed APKs have been built successfully.
-      - name: Download signed APKs
-        uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@v8
         with:
-          pattern: release-apk-*
+          name: release-apk-tv
           path: release-artifacts
-          merge-multiple: true
-
-      - name: Create release with all layouts
+      - name: Create release with the TV APK only
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release create "$GITHUB_REF_NAME" release-artifacts/*.apk \
+          gh release create "$GITHUB_REF_NAME" release-artifacts/*-tv.apk \
             --title "Release $GITHUB_REF_NAME" \
             --generate-notes

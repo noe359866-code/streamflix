@@ -79,6 +79,7 @@ import com.streamflixreborn.streamflix.utils.EpisodeManager
 import com.streamflixreborn.streamflix.utils.MediaServer
 import com.streamflixreborn.streamflix.utils.PlayerGestureHelper
 import com.streamflixreborn.streamflix.utils.UserPreferences
+import com.streamflixreborn.streamflix.utils.TvPlaybackPolicy
 import com.streamflixreborn.streamflix.utils.UserDataCache
 import com.streamflixreborn.streamflix.utils.dp
 import com.streamflixreborn.streamflix.utils.getFileName
@@ -1317,10 +1318,10 @@ class PlayerTvFragment : Fragment() {
                     }
                 }
                 
-                val lastPlaybackPositionMillis = watchItem?.watchHistory
-                    ?.let { it.lastPlaybackPositionMillis - 10.seconds.inWholeMilliseconds }
-
-                player.seekTo(lastPlaybackPositionMillis ?: 0)
+                player.seekTo(TvPlaybackPolicy.resumePosition(
+                    savedPositionMs = watchItem?.watchHistory?.lastPlaybackPositionMillis,
+                    durationMs = watchItem?.watchHistory?.durationMillis ?: player.duration,
+                ))
             } else {
                 player.seekTo(currentPosition)
             }
@@ -1331,16 +1332,15 @@ class PlayerTvFragment : Fragment() {
 
 
         private fun ExoPlayer.hasStarted(): Boolean {
-            return (this.currentPosition > (this.duration * 0.005) || this.currentPosition > 20.seconds.inWholeMilliseconds)
+            return TvPlaybackPolicy.hasStarted(currentPosition, duration)
         }
 
         private fun ExoPlayer.hasFinished(): Boolean {
-            return (this.currentPosition > (this.duration * 0.90))
+            return TvPlaybackPolicy.hasFinished(currentPosition, duration)
         }
 
         private fun ExoPlayer.hasReallyFinished(): Boolean {
-            return this.duration > 0 &&
-                    this.currentPosition >= (this.duration - UserPreferences.autoplayBuffer * 1000)
+            return TvPlaybackPolicy.hasReallyFinished(currentPosition, duration, UserPreferences.autoplayBuffer)
         }
 
         private fun currentVideoTypeForUi(): Video.Type = when (val type = args.videoType) {
@@ -1457,7 +1457,9 @@ class PlayerTvFragment : Fragment() {
                 NEXT_EPISODE_OVERLAY_MIN_THRESHOLD_MS,
                 UserPreferences.autoplayBuffer * 1000L
             )
-            if (nextEpisode == null || remainingMs == 0L || remainingMs > overlayThresholdMs) {
+            if (nextEpisode == null || !TvPlaybackPolicy.showNextEpisodeOverlay(
+                    player.currentPosition, duration, overlayThresholdMs
+                )) {
                 hideNextEpisodeOverlay()
                 return
             }

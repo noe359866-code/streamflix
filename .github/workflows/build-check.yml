@@ -1,4 +1,4 @@
-name: Build check
+name: Android TV quality
 
 on:
   pull_request:
@@ -7,18 +7,19 @@ on:
       - main
       - 'arena/**'
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
 
 concurrency:
-  group: build-check-${{ github.ref }}
+  group: tv-quality-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build-configuration:
-    name: Build configuration tests
-    runs-on: ubuntu-latest
+    name: TV configuration tests
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
@@ -29,20 +30,16 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v6
-      - name: Test configuration without Android SDK or local.properties
+      - name: Test TV-only configuration without Android SDK or credentials
         run: ./gradlew -p gradle/build-config-tests check --no-configuration-cache --stacktrace
 
-  build:
-    name: Debug APK (${{ matrix.layout }})
+  unit-and-build:
+    name: TV unit tests and debug APK
     needs: build-configuration
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        layout: [universal, mobile, tv]
     env:
-      APP_LAYOUT: ${{ matrix.layout }}
+      APP_LAYOUT: tv
     steps:
       - uses: actions/checkout@v7
         with:
@@ -54,7 +51,67 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
       - name: Show non-secret build configuration
         run: ./gradlew :app:printBuildConfiguration
-      - name: Build from a clean checkout without service credentials
-        run: ./gradlew :app:assembleDebug --stacktrace
-      - name: Verify APK output
+      - name: Run offline unit tests and build the only supported APK
+        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace
+      - name: Verify TV APK output
         run: test -f app/build/outputs/apk/debug/app-debug.apk
+      - name: Upload unit-test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: tv-unit-test-reports
+          path: app/build/reports/tests/testDebugUnitTest
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Upload TV debug APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: streamflix-tv-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  android-tv-emulator:
+    name: Android TV emulator tests (API 29)
+    needs: unit-and-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      APP_LAYOUT: tv
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Enable KVM for the TV emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run instrumentation on an Android TV AVD
+        uses: ReactiveCircus/android-emulator-runner@v2.38.0
+        with:
+          api-level: 29
+          target: android-tv
+          arch: x86_64
+          profile: tv_1080p
+          cores: 2
+          ram-size: 3072M
+          disable-animations: true
+          enable-hw-keyboard: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: ./gradlew :app:connectedDebugAndroidTest --stacktrace
+      - name: Upload TV instrumentation reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: tv-emulator-test-reports
+          path: |
+            app/build/reports/androidTests/connected
+            app/build/outputs/androidTest-results/connected
+          if-no-files-found: warn
+          retention-days: 7

@@ -1,7 +1,5 @@
 package com.streamflixreborn.streamflix.activities.main
 
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -16,7 +14,6 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.navOptions
 import com.bumptech.glide.Glide
 import com.tanasi.navigation.widget.setupWithNavController
-import com.streamflixreborn.streamflix.BuildConfig
 import com.streamflixreborn.streamflix.R
 import com.streamflixreborn.streamflix.database.AppDatabase
 import com.streamflixreborn.streamflix.databinding.ActivityMainTvBinding
@@ -70,12 +67,6 @@ class MainTvActivity : FragmentActivity() {
         val navController = navHostFragment.navController
 
         adjustLayoutDelta(null, null)
-
-        if (BuildConfig.APP_LAYOUT == "mobile" || (BuildConfig.APP_LAYOUT != "tv" && !packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK))) {
-            finish()
-            startActivity(Intent(this, MainMobileActivity::class.java))
-            return
-        }
 
         if (savedInstanceState == null) {
             UserPreferences.currentProvider?.let {

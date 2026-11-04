@@ -1,0 +1,13 @@
+#EXTM3U
+#EXTINF:-1 tvg-logo="https://example.invalid/one.png" group-title="Noticias" tvg-name="Noticias, en directo",Canal Uno, HD
+#EXTVLCOPT:http-user-agent=Streamflix/1.0
+#EXTVLCOPT:http-referrer=https://example.invalid/
+https://example.invalid/live/one.m3u8
+#EXTINF:-1 group-title="España" http-user-agent="InlineAgent" http-referrer="https://example.invalid/ref",Canal Dos
+http://example.invalid/live/two.m3u8
+#EXTINF:-1 group-title="No debe filtrarse",Canal sin URL
+#EXTINF:-1 group-title="Cine",Canal Tres
+https://example.invalid/live/three.m3u8
+https://example.invalid/orphan.m3u8
+#EXTINF:-1,
+https://example.invalid/empty-name.m3u8

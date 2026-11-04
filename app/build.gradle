@@ -34,18 +34,10 @@ android {
         targetSdk 35
         versionCode 145
         versionName "1.7.116"
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
         streamflixConfig.buildConfigFields.each { name, value ->
             buildConfigField "String", name, value
-        }
-    }
-
-    sourceSets {
-        main {
-            def manifestDirectory = streamflixConfig.appLayout == 'universal'
-                ? 'main'
-                : "main/${streamflixConfig.appLayout}"
-            manifest.srcFile "src/${manifestDirectory}/AndroidManifest.xml"
         }
     }
 
@@ -129,6 +121,12 @@ dependencies {
     implementation "org.nanohttpd:nanohttpd:2.3.1"
     implementation "com.google.zxing:core:3.5.1"
     implementation("org.java-websocket:Java-WebSocket:1.5.3")
+
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test:rules:1.6.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
     
 }
 
