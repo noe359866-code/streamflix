@@ -78,8 +78,9 @@ jobs:
       # Android TV: layout tv (el manifest de TV exige leanback).
       - name: Build APK (TV)
         run: |
+          set -o pipefail
           echo "APP_LAYOUT=tv" >> local.properties
-          ./gradlew :app:assembleRelease --stacktrace --no-daemon
+          ./gradlew :app:assembleRelease --stacktrace --no-daemon 2>&1 | tee build-tv.log
 
       - name: Collect APK (TV)
         run: |
@@ -90,15 +91,28 @@ jobs:
       # Celular: mismo binario con layout mobile forzado.
       - name: Build APK (Mobile)
         run: |
+          set -o pipefail
           sed -i '/^APP_LAYOUT=/d' local.properties
           echo "APP_LAYOUT=mobile" >> local.properties
-          ./gradlew :app:assembleRelease --stacktrace --no-daemon
+          ./gradlew :app:assembleRelease --stacktrace --no-daemon 2>&1 | tee build-mobile.log
 
       - name: Collect APK (Mobile)
         run: |
           cp app/build/outputs/apk/release/app-release.apk \
              "out/streamflix-${{ steps.version.outputs.value }}-mobile.apk"
           ls -lh out
+
+      # Log completo de Gradle: se sube siempre para poder diagnosticar
+      # fallos de compilación desde fuera del runner.
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-logs
+          path: |
+            build-tv.log
+            build-mobile.log
+          if-no-files-found: ignore
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
