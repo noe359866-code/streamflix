@@ -125,6 +125,8 @@ class FirestreamExtractor : Extractor() {
 
         return Video(
             source = source,
+            // HLS o MP4 según la extensión firmada; el player ya no acepta otra cosa.
+            type = Extractor.formatOf(source),
             subtitles = subtitles,
             headers = mapOf(
                 "User-Agent" to USER_AGENT,

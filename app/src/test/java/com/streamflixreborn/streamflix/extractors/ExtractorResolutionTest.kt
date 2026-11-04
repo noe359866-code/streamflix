@@ -1,5 +1,6 @@
 package com.streamflixreborn.streamflix.extractors
 
+import androidx.media3.common.MimeTypes
 import com.streamflixreborn.streamflix.models.Video
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -16,10 +17,24 @@ class ExtractorResolutionTest {
         Extractor.describe(url, Video.Server(id = url, name = serverName, src = url))
 
     @Test
-    fun `enlaces directos se reconocen por extension`() {
+    fun `solo HLS y MP4 se aceptan como enlace directo`() {
         assertEquals("direct", describe("https://cdn.example.com/live/channel.m3u8?token=abc"))
         assertEquals("direct", describe("https://raw.githubusercontent.com/x/y/main/VIDEO/SIN-SE%C3%91AL.mp4"))
-        assertEquals("direct", describe("https://cdn.example.com/movie.mkv"))
+    }
+
+    @Test
+    fun `otros formatos no se clasifican como enlace directo`() {
+        assertNull(describe("https://cdn.example.com/movie.mkv"))
+        assertNull(describe("https://cdn.example.com/manifest.mpd"))
+        assertNull(describe("https://cdn.example.com/movie.webm"))
+    }
+
+    @Test
+    fun `formatOf distingue HLS y MP4`() {
+        assertEquals(MimeTypes.APPLICATION_M3U8, Extractor.formatOf("https://x.com/a.m3u8?t=1"))
+        assertEquals(MimeTypes.VIDEO_MP4, Extractor.formatOf("https://x.com/a.mp4"))
+        assertNull(Extractor.formatOf("https://x.com/a.mkv"))
+        assertNull(Extractor.formatOf("https://x.com/e/abc123"))
     }
 
     @Test

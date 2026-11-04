@@ -1,6 +1,7 @@
 package com.streamflixreborn.streamflix.extractors
 
 import android.util.Log
+import androidx.media3.common.MimeTypes
 import com.streamflixreborn.streamflix.models.Video
 import com.streamflixreborn.streamflix.scrapers.HttpScraper
 import com.streamflixreborn.streamflix.utils.JsUnpacker
@@ -18,6 +19,7 @@ import java.net.URL
  * Cambios frente a la versión original:
  * - descarga con [HttpScraper] (IO + reintentos + cierre de respuesta) en cada
  *   salto, no con un Retrofit que fallaba ante un 3xx o un challenge;
+ * - sólo devuelve **HLS (.m3u8) o MP4**, que son los formatos que reproduce la app;
  * - acepta fuentes sin extensión (los HLS con token en el query string) y
  *   normaliza `\/` / `\u0026` / `&amp;`;
  * - devuelve también el `Referer`/`Origin` correcto del último salto para que
@@ -39,6 +41,10 @@ abstract class GenericPackedSourceExtractor : Extractor() {
 
         return Video(
             source = videoSource,
+            type = when {
+                videoSource.lowercase().contains(".mp4") -> MimeTypes.VIDEO_MP4
+                else -> MimeTypes.APPLICATION_M3U8
+            },
             headers = mapOf(
                 "Referer" to "$playbackBase/",
                 "Origin" to playbackBase,
@@ -133,10 +139,10 @@ abstract class GenericPackedSourceExtractor : Extractor() {
         )
 
         private val sourcePatterns = listOf(
-            // file / src con extensión de streaming
-            Regex("""(?i)(?:file|src|hls|url)\s*[:=]\s*["'](https?://[^"']+\.(?:m3u8|mp4|webm)(?:\?[^"']*)?)["']"""),
+            // file / src con extensión soportada (sólo HLS y MP4)
+            Regex("""(?i)(?:file|src|hls|url)\s*[:=]\s*["'](https?://[^"']+\.(?:m3u8|mp4)(?:\?[^"']*)?)["']"""),
             // arrays de fuentes
-            Regex("""(?i)sources?\s*[:=]\s*\[\s*["'](https?://[^"']+\.(?:m3u8|mp4|webm)(?:\?[^"']*)?)["']"""),
+            Regex("""(?i)sources?\s*[:=]\s*\[\s*["'](https?://[^"']+\.(?:m3u8|mp4)(?:\?[^"']*)?)["']"""),
             // m3u8 con token (sin extensión limpia)
             Regex("""(?i)["'](https?://[^"']*(?:master|playlist|index|manifest)[^"']*\.m3u8[^"']*)["']"""),
             // último recurso: cualquier m3u8/mp4 entrecomillado

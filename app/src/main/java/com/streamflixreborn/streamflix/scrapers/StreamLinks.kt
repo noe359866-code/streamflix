@@ -12,8 +12,10 @@ import java.net.URI
  * que nunca van a reproducir nada.
  *
  * Reglas:
- * - sólo `http(s)` (aquí ya no hay RTSP/RTMP porque ExoPlayer no los maneja en
- *   este player; se filtran en [M3UProvider] sólo si hace falta cambiarlo);
+ * - sólo `http(s)`;
+ * - el resultado final que se entrega al player es **HLS (.m3u8) o MP4**; los
+ *   enlaces de un player se aceptan aquí para poder resolverlos, pero el
+ *   formato se valida en `Video`/`Extractor`;
  * - se descartan hosts sociales/monetización y rutas de soporte;
  * - se descartan páginas del propio sitio (`/genero/`, `/donacion`, `#`).
  */
@@ -50,14 +52,24 @@ object StreamLinks {
         if (BLOCKED_HOSTS.any { host == it || host.endsWith(".$it") || value.lowercase().contains(it) }) return false
         if (BLOCKED_PATH_HINTS.any { path.contains(it) }) return false
 
+        // Formatos entregables: HLS y MP4 (nada de DASH/MKV/WEBM/FLV).
+        if (path.endsWith(".mpd") || path.endsWith(".mkv") || path.endsWith(".webm") || path.endsWith(".flv")) {
+            return false
+        }
+
         // Un iframe de video casi siempre trae un id/ruta; un "/" pelado es publicidad.
         val looksLikeMedia = path.endsWith(".m3u8") || path.endsWith(".mp4") ||
-            path.endsWith(".mpd") || path.endsWith(".mkv") || path.endsWith(".webm") ||
             path.contains("/embed") || path.contains("/e/") || path.contains("/v/") ||
             path.contains("/video") || path.contains("/player") || path.contains("/watch") ||
             path.contains("/ifr") || path.contains("/play") || path.contains("/jkplayer") ||
             uri.query?.isNotEmpty() == true
         return looksLikeMedia || path.length > 1
+    }
+
+    /** `true` si la URL ya es directamente HLS o MP4 (sin pasar por un player). */
+    fun isDirectMedia(url: String?): Boolean {
+        val path = url?.substringBefore('?')?.substringBefore('#')?.lowercase().orEmpty()
+        return path.endsWith(".m3u8") || path.endsWith(".mp4")
     }
 
     /** Deja sólo servidores reproducibles, sin duplicados ni nombres vacíos. */

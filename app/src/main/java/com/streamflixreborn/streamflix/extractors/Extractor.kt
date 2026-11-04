@@ -183,15 +183,21 @@ abstract class Extractor {
             }
         }
 
-        /** Tipo MIME si el enlace es un archivo multimedia directo (sin player). */
-        private fun directMediaType(link: String): String? {
+        /**
+         * Tipo MIME si el enlace es un archivo directo **HLS o MP4**.
+         *
+         * La app sólo entrega estos dos formatos: cualquier otra cosa (MPD/DASH,
+         * MKV, WEBM, FLV…) no se considera un stream válido y el extractor
+         * intentará resolverla como player empaquetado.
+         */
+        private fun directMediaType(link: String): String? = formatOf(link)
+
+        /** `MimeTypes.APPLICATION_M3U8` para HLS, `MimeTypes.VIDEO_MP4` para MP4, `null` si no es ninguno. */
+        internal fun formatOf(link: String): String? {
             val path = link.substringBefore('?').substringBefore('#').lowercase()
             return when {
-                path.endsWith(".m3u8") -> MimeTypes.APPLICATION_M3U8
-                path.endsWith(".mpd") -> MimeTypes.APPLICATION_MPD
-                path.endsWith(".mp4") -> MimeTypes.VIDEO_MP4
-                path.endsWith(".webm") -> MimeTypes.VIDEO_WEBM
-                path.endsWith(".mkv") -> MimeTypes.VIDEO_MATROSKA
+                path.endsWith(".m3u8") || path.contains(".m3u8") -> MimeTypes.APPLICATION_M3U8
+                path.endsWith(".mp4") || path.contains(".mp4") -> MimeTypes.VIDEO_MP4
                 else -> null
             }
         }
@@ -260,7 +266,7 @@ abstract class Extractor {
                 return video
             }
 
-            // 5) Enlaces directos (HLS/MP4 de IPTV y de CDNs sin envoltorio).
+            // 5) Enlaces directos: sólo HLS (.m3u8) y MP4 se aceptan como stream.
             directMediaType(finalLink)?.let { mediaType ->
                 Log.i(TAG, "[DIRECT] -> $finalLink")
                 return Video(source = finalLink, type = mediaType)

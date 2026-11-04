@@ -41,8 +41,21 @@ class StreamLinksTest {
             "https://sitio.com/soporte",
             "javascript:void(0)",
             "about:blank",
+            "https://cdn.example.com/manifest.mpd",
+            "https://cdn.example.com/movie.mkv",
+            "https://cdn.example.com/movie.webm",
+            "https://cdn.example.com/movie.flv",
         )
         rejected.forEach { assertFalse("no debería aceptar '$it'", StreamLinks.isPlayable(it)) }
+    }
+
+    @Test
+    fun `solo m3u8 y mp4 cuentan como media directa`() {
+        assertTrue(StreamLinks.isDirectMedia("https://cdn.example.com/a.m3u8?t=1"))
+        assertTrue(StreamLinks.isDirectMedia("https://cdn.example.com/a.mp4"))
+        assertFalse(StreamLinks.isDirectMedia("https://cdn.example.com/a.mpd"))
+        assertFalse(StreamLinks.isDirectMedia("https://cdn.example.com/a.mkv"))
+        assertFalse(StreamLinks.isDirectMedia("https://cdn.example.com/e/abc"))
     }
 
     @Test

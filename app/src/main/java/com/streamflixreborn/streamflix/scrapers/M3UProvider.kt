@@ -38,9 +38,9 @@ import com.streamflixreborn.streamflix.providers.Provider
 abstract class M3UProvider : Provider {
 
     companion object {
-        /** Esquemas de URL que jamás son un stream utilizable. */
+        /** Lo único que se puede entregar al player: HLS o MP4 sobre http(s). */
         private val STREAM_URL = Regex(
-            """^(?:https?|rtsp|rtsps|rtmp|rtmps|udp|rtp|mms)://[^\s]+""",
+            """^https?://[^\s]+""",
             RegexOption.IGNORE_CASE,
         )
 
@@ -87,8 +87,9 @@ abstract class M3UProvider : Provider {
         }.orEmpty()
 
     /**
-     * Un canal entra en la app sólo si apunta a algo que se puede reproducir:
-     * http(s), rtsp, rtmp, udp o rtp con host y ruta.
+     * Un canal entra en la app sólo si apunta a algo que se puede reproducir con
+     * los formatos soportados: **HLS (`application/x-mpegURL`) o MP4** sobre http(s).
+     * Se descartan UDP/RTSP/RTMP y enlaces de relleno.
      */
     protected fun isPlayableStream(channel: M3UChannel): Boolean {
         val url = channel.url.trim()
@@ -265,12 +266,16 @@ abstract class M3UProvider : Provider {
             throw Exception("Este item no es un stream reproducible")
         }
         Log.d(tag, "Play: ${channel.url} (headers: ${channel.headers.keys})")
+        // El tipo se fija por extensión: HLS o MP4, nunca otra cosa.
+        val type = when {
+            channel.url.lowercase().contains(".mp4") -> MimeTypes.VIDEO_MP4
+            else -> MimeTypes.APPLICATION_M3U8
+        }
         return Video(
             source = channel.url,
             subtitles = emptyList(),
             headers = channel.headers.ifEmpty { null },
-            // Todos estos canales sirven HLS; si alguno fuese MP4 el player lo detecta igual.
-            type = MimeTypes.APPLICATION_M3U8,
+            type = type,
         )
     }
 
