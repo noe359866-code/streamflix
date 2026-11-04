@@ -10,3 +10,6 @@
 local.properties
 *.salive
 *.log
+
+# Keystore efímero generado en CI
+ci-signing/
