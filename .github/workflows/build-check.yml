@@ -30,14 +30,7 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v6
       - name: Test configuration without Android SDK or local.properties
-        run: |
-          if ! ./gradlew -p gradle/build-config-tests check --no-configuration-cache --stacktrace > /tmp/streamflix-build-config.log 2>&1; then
-            cat /tmp/streamflix-build-config.log
-            python3 -c 'from pathlib import Path; from urllib.parse import quote; lines = Path("/tmp/streamflix-build-config.log").read_text().splitlines(); start = next((i for i, line in enumerate(lines) if "What went wrong:" in line), max(0, len(lines)-30)); text = "\n".join(lines[start:start+25]); print("::error title=Build configuration tests::" + quote(text, safe=""))' > /tmp/streamflix-build-config-error.txt
-            cat /tmp/streamflix-build-config-error.txt
-            exit 1
-          fi
-          cat /tmp/streamflix-build-config.log
+        run: ./gradlew -p gradle/build-config-tests check --no-configuration-cache --stacktrace
 
   build:
     name: Debug APK (${{ matrix.layout }})
