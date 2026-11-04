@@ -269,14 +269,17 @@ class PlayerMobileFragment : Fragment() {
         initializePlayer(false)
         initializeVideo()
         gestureHelper = PlayerGestureHelper(
-            requireContext(), 
-            binding.pvPlayer, 
-            binding.llBrightness, 
-            binding.pbBrightness, 
+            requireContext(),
+            binding.pvPlayer,
+            binding.llBrightness,
+            binding.pbBrightness,
             binding.tvBrightnessPercentage,
-            binding.llVolume, 
-            binding.pbVolume, 
-            binding.tvVolumePercentage
+            binding.llVolume,
+            binding.pbVolume,
+            binding.tvVolumePercentage,
+            binding.llSeek,
+            binding.tvSeekDelta,
+            binding.ivSeekIcon,
         )
 
         // Stato Video
@@ -725,7 +728,10 @@ class PlayerMobileFragment : Fragment() {
         }
 
         binding.pvPlayer.controller.binding.btnSkipIntro.setOnClickListener {
-            player.seekTo(player.currentPosition + 85000)
+            // Antes: seekTo(currentPosition + 85 s) siempre, que en series con
+            // intro de 30 s o de 2 min cortaba contenido o dejaba 55 s de intro.
+            // Ver [SkipIntroResolver].
+            player.seekTo(SkipIntroResolver.targetPosition(player))
             it.isGone = true
         }
 

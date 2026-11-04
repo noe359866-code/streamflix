@@ -154,6 +154,13 @@ object UserPreferences {
             Key.AUTOPLAY_BUFFER.setLong(value)
         }
 
+    /** Segundos que salta "Omitir intro". 0 = usar el valor por defecto del resolver. */
+    var playerSkipIntroSeconds: Long
+        get() = Key.PLAYER_SKIP_INTRO_SECONDS.getLong() ?: 0L
+        set(value) {
+            Key.PLAYER_SKIP_INTRO_SECONDS.setLong(value)
+        }
+
     var serverAutoSubtitlesDisabled: Boolean
         get() = Key.SERVER_AUTO_SUBTITLES_DISABLED.getBoolean() ?: true
         set(value) {
@@ -463,6 +470,7 @@ object UserPreferences {
         SUBDL_API_KEY,
         FORCE_EXTRA_BUFFERING,
         AUTOPLAY_BUFFER,
+        PLAYER_SKIP_INTRO_SECONDS,
         SERVER_AUTO_SUBTITLES_DISABLED,
         ENABLE_TMDB,
         PARENTAL_CONTROL_PIN,

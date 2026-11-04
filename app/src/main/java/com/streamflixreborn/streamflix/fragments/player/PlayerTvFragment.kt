@@ -836,7 +836,8 @@ class PlayerTvFragment : Fragment() {
             }
 
             binding.pvPlayer.controller.binding.btnSkipIntro.setOnClickListener {
-                player.seekTo(player.currentPosition + 85000)
+                // Duración real del intro, no 85 s fijos (ver [SkipIntroResolver]).
+                player.seekTo(SkipIntroResolver.targetPosition(player))
                 it.visibility = View.GONE
             }
 

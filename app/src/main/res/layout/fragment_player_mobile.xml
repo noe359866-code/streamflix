@@ -138,6 +138,45 @@
         </LinearLayout>
     </LinearLayout>
 
+
+    <!-- Burbuja de seek por gesto (arrastre horizontal / doble toque lateral). -->
+    <LinearLayout
+        android:id="@+id/ll_seek"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="48dp"
+        android:background="@drawable/bg_seek_bubble"
+        android:elevation="8dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="10dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="visible">
+
+        <ImageView
+            android:id="@+id/iv_seek_icon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:contentDescription="@null"
+            android:src="@drawable/exo_styled_controls_fastforward"
+            app:tint="#FFFFFF" />
+
+        <TextView
+            android:id="@+id/tv_seek_delta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textAppearance="@style/TextAppearance.App.Subtitle"
+            android:textColor="#FFFFFF"
+            tools:text="+0:15" />
+    </LinearLayout>
+
     <LinearLayout
         android:id="@+id/ll_brightness"
         android:layout_width="wrap_content"
