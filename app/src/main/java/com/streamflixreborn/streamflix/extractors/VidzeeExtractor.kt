@@ -3,6 +3,7 @@ package com.streamflixreborn.streamflix.extractors
 import android.util.Base64
 import androidx.media3.common.MimeTypes
 import com.streamflixreborn.streamflix.models.Video
+import com.streamflixreborn.streamflix.scrapers.awaitCodeAndBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -75,10 +76,9 @@ class VidzeeExtractor : Extractor() {
                 .header("Referer", "$mainUrl/")
                 .build()
 
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) throw Exception("Network error")
-
-            val body = response.body?.string() ?: throw Exception("Empty body")
+            val (code, body) = client.awaitCodeAndBody(request)
+            if (code !in 200..299) throw Exception("Network error (HTTP $code)")
+            if (body.isEmpty()) throw Exception("Empty body")
             val json = JSONObject(body)
             val urlArray = json.optJSONArray("url") ?: throw Exception("No URLs found")
             if (urlArray.length() == 0) throw Exception("Empty URL array")
@@ -123,7 +123,7 @@ class VidzeeExtractor : Extractor() {
         }
     }
 
-    private fun getMasterKey(): String? {
+    private suspend fun getMasterKey(): String? {
         return try {
             val request = Request.Builder()
                 .url("$coreApi/api-key")
@@ -132,10 +132,8 @@ class VidzeeExtractor : Extractor() {
                 .header("Referer", "$mainUrl/")
                 .build()
 
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) return null
-
-            val b64Data = response.body?.string() ?: return null
+            val (code, b64Data) = client.awaitCodeAndBody(request)
+            if (code !in 200..299 || b64Data.isEmpty()) return null
             val data = Base64.decode(b64Data, Base64.DEFAULT)
 
             val iv = data.sliceArray(0 until 12)

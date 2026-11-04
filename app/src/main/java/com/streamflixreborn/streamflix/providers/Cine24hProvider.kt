@@ -6,19 +6,17 @@ import android.util.Log
 import com.streamflixreborn.streamflix.adapters.AppAdapter
 import com.streamflixreborn.streamflix.extractors.Extractor
 import com.streamflixreborn.streamflix.models.*
+import com.streamflixreborn.streamflix.scrapers.BypassFetcher
+import com.streamflixreborn.streamflix.scrapers.HttpScraper
+import com.streamflixreborn.streamflix.scrapers.ScraperParsing
 import com.streamflixreborn.streamflix.utils.NetworkClient
-import com.streamflixreborn.streamflix.utils.WebViewResolver
-import com.streamflixreborn.streamflix.StreamFlixApp
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import okhttp3.HttpUrl.Companion.toHttpUrl
-import okhttp3.Request
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import java.net.URLEncoder
-import java.util.concurrent.TimeUnit
 
 object Cine24hProvider : Provider {
 
@@ -27,49 +25,22 @@ object Cine24hProvider : Provider {
     override val language = "es"
     override val logo = "https://i.ibb.co/kgjcsFmj/Image-1.png"
 
-    private var webViewResolver: WebViewResolver? = null
     private val providerMutex = Mutex()
-    private const val TAG = "Cine24hBypass"
+    private const val TAG = "Cine24h"
 
-    private fun getResolver(): WebViewResolver {
-        return webViewResolver ?: WebViewResolver(StreamFlixApp.instance).also {
-            webViewResolver = it
-        }
-    }
+    /**
+     * Descarga con cascada compartida: primero OkHttp con timeout corto y, sólo si
+     * hay challenge o error, WebView. El resultado se cachea 5 minutos.
+     */
+    private val bypassFetcher = BypassFetcher(webViewTimeoutMs = 90_000L)
 
     fun init(context: Context) {
-        webViewResolver = WebViewResolver(context)
+        bypassFetcher.attach(context)
     }
 
     private suspend fun getDocument(url: String): Document {
-        try {
-            // Tentativo ultra-veloce (3s) per rilevare se serve la WebView
-            val client = NetworkClient.default.newBuilder()
-                .connectTimeout(3, TimeUnit.SECONDS)
-                .readTimeout(3, TimeUnit.SECONDS)
-                .writeTimeout(3, TimeUnit.SECONDS)
-                .build()
-
-            val request = Request.Builder()
-                .url(url)
-                .header("Referer", baseUrl)
-                .build()
-            
-            val response = client.newCall(request).execute()
-            
-            if (response.isSuccessful) {
-                val html = response.body?.string() ?: ""
-                // Se non c'è traccia di Cloudflare, procediamo con OkHttp (veloce)
-                if (!html.contains("cf-browser-verification") && !html.contains("Checking your browser") && !html.contains("Just a moment...")) {
-                    return Jsoup.parse(html).apply { setBaseUri(baseUrl) }
-                }
-            }
-        } catch (_: Exception) { }
-
-        // Se OkHttp fallisce o rileva blocco, passiamo SUBITO alla WebView
-        Log.d(TAG, "[Provider] Launching WebView Bypass for $url")
-        val html = getResolver().get(url)
-        return Jsoup.parse(html).apply { setBaseUri(baseUrl) }
+        val html = bypassFetcher.fetch(url, referer = baseUrl)
+        return Jsoup.parse(html, baseUrl)
     }
 
     override suspend fun getHome(): List<Category> = providerMutex.withLock {
@@ -115,11 +86,15 @@ object Cine24hProvider : Provider {
             val url = anchor.attr("href")
             var titleText = anchor.selectFirst("h2, h3, .Title, .text-md, .name, .poster__title")?.text()?.trim()
             if (titleText.isNullOrEmpty()) titleText = el.selectFirst("h2, h3, .Title, .name")?.text()?.trim()
-            val finalTitle = titleText ?: return@mapNotNull null
+            val finalTitle = ScraperParsing.cleanTitle(titleText) ?: return@mapNotNull null
             var processedTitle = finalTitle
             anchor.selectFirst(".language-box .lang-item span")?.text()?.trim()?.let { if (it.isNotEmpty()) processedTitle += " [$it]" }
             val img = anchor.selectFirst("img") ?: el.selectFirst("img")
-            val poster = img?.let { it.attr("abs:src").ifEmpty { it.attr("abs:data-src") }.ifEmpty { it.attr("src") } }?.replace("/w185/", "/w300/")?.replace("/w92/", "/w300/") ?: ""
+            // helper compartido: resuelve lazy-load (data-src/srcset) y descarta placeholders
+            val poster = ScraperParsing.imageUrl(img, baseUrl)
+                ?.replace("/w185/", "/w300/")
+                ?.replace("/w92/", "/w300/")
+                ?: ""
             if (url.contains("/peliculas/") || url.contains("/movies/")) {
                 Movie(id = url.substringAfter("/peliculas/").substringAfter("/movies/").removeSuffix("/"), title = processedTitle, poster = poster)
             } else if (url.contains("/series/")) {
@@ -136,31 +111,88 @@ object Cine24hProvider : Provider {
         Genre(id = id, name = id.removePrefix("category/").removeSuffix("/").replaceFirstChar { it.uppercase() }, shows = shows) 
     } catch (_: Exception) { Genre(id = id, name = "Error") }
 
-    override suspend fun getMovie(id: String): Movie = getDocument("$baseUrl/peliculas/$id").let { doc ->
-        val info = doc.selectFirst(".TPost footer .Info, .Info")
-        Movie(id = id, title = doc.selectFirst(".TPost header .Title, h1")?.text() ?: "", overview = doc.selectFirst(".TPost .Description, .Description, .page__text")?.text(), poster = doc.selectFirst(".TPost .Image img, .pmovie__poster img")?.attr("abs:src")?.replace("/w185/", "/w500/"), rating = info?.selectFirst(".Rank")?.text()?.toDoubleOrNull(), released = info?.selectFirst(".Date")?.text(),
-            runtime = info?.selectFirst(".Time")?.text()?.replace("h", "")?.replace("m", "")?.trim()?.split(" ")?.let { (it.getOrNull(0)?.toIntOrNull() ?: 0) * 60 + (it.getOrNull(1)?.toIntOrNull() ?: 0) },
-            genres = doc.select(".TPost .Description .Genre a, a[href*='/category/']").map { Genre(id = it.attr("href"), name = it.text()) })
+    private fun parseDetails(doc: Document, id: String): Details = Details(
+        title = ScraperParsing.textOrNull(doc, ".TPost header .Title", "h1", ".Title") ?: "",
+        overview = ScraperParsing.textOrNull(doc, ".TPost .Description", ".Description", ".page__text"),
+        poster = ScraperParsing.imageUrl(doc.selectFirst(".TPost .Image img, .pmovie__poster img"), baseUrl)
+            ?.replace("/w185/", "/w500/"),
+        rating = ScraperParsing.parseRating(doc.selectFirst(".Rank")?.text()),
+        year = ScraperParsing.parseYear(doc.selectFirst(".Date")?.text()),
+        runtime = ScraperParsing.parseRuntimeMinutes(doc.selectFirst(".Time")?.text()),
+        genres = doc.select(".TPost .Description .Genre a, a[href*='/category/']")
+            .map { Genre(id = it.attr("href"), name = it.text()) }
+            .distinctBy { it.id },
+    )
+
+    private data class Details(
+        val title: String,
+        val overview: String?,
+        val poster: String?,
+        val rating: Double?,
+        val year: String?,
+        val runtime: Int?,
+        val genres: List<Genre>,
+    )
+
+    override suspend fun getMovie(id: String): Movie {
+        val details = parseDetails(getDocument("$baseUrl/peliculas/$id"), id)
+        return Movie(
+            id = id,
+            title = details.title,
+            overview = details.overview,
+            poster = details.poster,
+            rating = details.rating,
+            released = details.year,
+            runtime = details.runtime,
+            genres = details.genres,
+        )
     }
 
-    override suspend fun getTvShow(id: String): TvShow = getDocument("$baseUrl/series/$id").let { doc ->
-        val info = doc.selectFirst(".TPost footer .Info, .Info")
-        val seasons = doc.select(".AABox").mapNotNull { el -> 
-            el.selectFirst(".Title")?.text()?.let { t -> 
-                Regex("""\d+$""").find(t)?.value?.toIntOrNull()?.let { n -> Season(id = "$id/$n", number = n, title = t) } 
-            } 
-        }.sortedByDescending { it.number }
-        TvShow(id = id, title = doc.selectFirst(".TPost header .Title, h1")?.text() ?: "", overview = doc.selectFirst(".TPost .Description, .Description, .page__text")?.text(), poster = doc.selectFirst(".TPost .Image img, .pmovie__poster img")?.attr("abs:src")?.replace("/w185/", "/w500/"), rating = info?.selectFirst(".Rank")?.text()?.toDoubleOrNull(), released = info?.selectFirst(".Date")?.text(),
-            genres = doc.select(".TPost .Description .Genre a, a[href*='/category/']").map { Genre(id = it.attr("href"), name = it.text()) },
-            seasons = seasons)
+    override suspend fun getTvShow(id: String): TvShow {
+        val doc = getDocument("$baseUrl/series/$id")
+        val details = parseDetails(doc, id)
+        // El número de temporada puede venir como "Temporada 2", "Season 2" o solo "2".
+        val seasons = doc.select(".AABox").mapNotNull { el ->
+            val title = ScraperParsing.cleanText(el.selectFirst(".Title")?.text()) ?: return@mapNotNull null
+            val number = ScraperParsing.parseSeasonNumber(title) ?: return@mapNotNull null
+            Season(id = "$id/$number", number = number, title = title)
+        }.distinctBy { it.number }.sortedByDescending { it.number }
+
+        return TvShow(
+            id = id,
+            title = details.title,
+            overview = details.overview,
+            poster = details.poster,
+            rating = details.rating,
+            released = details.year,
+            genres = details.genres,
+            seasons = seasons,
+        )
     }
 
     override suspend fun getEpisodesBySeason(seasonId: String): List<Episode> = try {
         val (showId, sNum) = seasonId.split("/"); val doc = getDocument("$baseUrl/series/$showId")
-        doc.select(".AABox").find { (it.selectFirst(".Title")?.text() ?: "").trim().endsWith(sNum) }?.select(".TPTblCn tr, .TPTblCn li")?.mapNotNull { row ->
-            val a = row.selectFirst(".MvTbTtl a, a") ?: return@mapNotNull null
-            Episode(id = a.attr("abs:href"), number = row.selectFirst(".Num")?.text()?.toIntOrNull() ?: 0, title = a.text().trim(), poster = row.selectFirst(".MvTbImg img, img")?.attr("abs:src")?.replace("/w154/", "/w300/"), released = row.selectFirst(".MvTbTtl span")?.text())
-        }?.sortedBy { it.number } ?: emptyList()
+        doc.select(".AABox")
+            .find { (it.selectFirst(".Title")?.text() ?: "").trim().endsWith(sNum) }
+            ?.select(".TPTblCn tr, .TPTblCn li")
+            ?.mapNotNull { row ->
+                val a = row.selectFirst(".MvTbTtl a, a") ?: return@mapNotNull null
+                val title = ScraperParsing.cleanText(a.text())
+                val number = row.selectFirst(".Num")?.text()?.trim()?.toIntOrNull()
+                    ?: ScraperParsing.parseEpisodeNumber(title)
+                    ?: return@mapNotNull null
+                Episode(
+                    id = a.attr("abs:href").ifEmpty { a.attr("href") },
+                    number = number,
+                    title = title,
+                    poster = ScraperParsing.imageUrl(row.selectFirst(".MvTbImg img, img"), baseUrl)
+                        ?.replace("/w154/", "/w300/"),
+                    released = ScraperParsing.parseYear(row.selectFirst(".MvTbTtl span")?.text()),
+                )
+            }
+            ?.distinctBy { it.number }
+            ?.sortedBy { it.number }
+            ?: emptyList()
     } catch (_: Exception) { emptyList() }
 
     override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> = try {
@@ -171,7 +203,11 @@ object Cine24hProvider : Provider {
         coroutineScope {
             serverElements.map { el ->
                 async {
-                    val info = el.selectFirst("button")?.text()?.replace(el.selectFirst(".nmopt")?.text() ?: "", "")?.trim() ?: ""
+                    val info = el.selectFirst("button")?.text()
+                        ?.replace(el.selectFirst(".nmopt")?.text() ?: "", "")
+                        ?.replace("\u00a0", " ")
+                        ?.trim()
+                        ?: ""
                     val dataSrc = el.attr("data-src")
                     val decoded = if (dataSrc.isNotEmpty()) {
                         try { String(Base64.decode(dataSrc, Base64.DEFAULT)) } catch(_:Exception) { "" }
@@ -182,7 +218,7 @@ object Cine24hProvider : Provider {
                         val finalUrl = getIframeOptimized(decoded) ?: return@async null
                         Video.Server(
                             id = finalUrl, 
-                            name = "${finalUrl.toHttpUrl().host.replace("www.", "").substringBefore(".")} ($info)", 
+                            name = "${runCatching { java.net.URL(finalUrl).host }.getOrNull()?.replace("www.", "")?.substringBefore(".") ?: "server"} ($info)", 
                             src = finalUrl
                         )
                     } catch (_: Exception) { null }
@@ -191,18 +227,21 @@ object Cine24hProvider : Provider {
         }
     } catch (_: Exception) { emptyList() }
 
-    private suspend fun getIframeOptimized(url: String): String? {
-        try {
-            val response = NetworkClient.default.newCall(Request.Builder().url(url).build()).execute()
-            val body = response.body?.string() ?: ""
-            if (body.contains("iframe")) {
-                val iframeUrl = Jsoup.parse(body).selectFirst("iframe")?.attr("abs:src")
-                if (!iframeUrl.isNullOrEmpty()) {
-                    return iframeUrl
-                }
+    private suspend fun getIframeOptimized(url: String, referer: String = baseUrl): String? {
+        // Intento rápido: la mayoría de embeds exponen el iframe directamente en el HTML.
+        val html = HttpScraper.getText(url, referer = referer, attempts = 1)
+        if (!html.isNullOrBlank()) {
+            val doc = Jsoup.parse(html, url)
+            doc.selectFirst("iframe")?.let { iframe ->
+                val src = iframe.attr("abs:src").ifEmpty { iframe.attr("src") }
+                if (src.startsWith("http")) return src
             }
-        } catch (_: Exception) { }
-        return getDocument(url).selectFirst("iframe")?.attr("abs:src")
+            // Algunos embeds generan el player por JS con `file:` o `<source src>`.
+            Regex("""['"](https?://[^'"]+\.(?:m3u8|mp4)[^'"]*)['"]""")
+                .find(html)?.groupValues?.get(1)?.let { return it }
+        }
+        // Fallback con bypass (por si hay Cloudflare en el embed).
+        return getDocument(url).selectFirst("iframe")?.attr("abs:src")?.ifEmpty { null }
     }
 
     override suspend fun getVideo(server: Video.Server): Video = Extractor.extract(server.src, server)

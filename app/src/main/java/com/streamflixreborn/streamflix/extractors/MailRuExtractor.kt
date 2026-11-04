@@ -3,6 +3,7 @@ package com.streamflixreborn.streamflix.extractors
 import com.streamflixreborn.streamflix.models.Video
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.streamflixreborn.streamflix.scrapers.awaitCodeAndBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
@@ -24,10 +25,9 @@ class MailRuExtractor : Extractor() {
                 .url(metaUrl)
                 .build()
             
-            val response = client.newCall(request).execute()
-            val responseBody = response.body?.string()
-            
-            if (!response.isSuccessful || responseBody.isNullOrEmpty()) {
+            val (code, responseBody) = client.awaitCodeAndBody(request)
+
+            if (code !in 200..299 || responseBody.isEmpty()) {
                 throw Exception("Failed to fetch video metadata")
             }
             

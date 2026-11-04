@@ -12,6 +12,7 @@ import com.streamflixreborn.streamflix.models.Show
 import com.streamflixreborn.streamflix.models.TvShow
 import com.streamflixreborn.streamflix.models.Video
 import com.streamflixreborn.streamflix.extractors.Extractor
+import com.streamflixreborn.streamflix.scrapers.await
 import com.streamflixreborn.streamflix.utils.DnsResolver
 import com.streamflixreborn.streamflix.utils.TmdbUtils
 import kotlinx.coroutines.Dispatchers
@@ -538,25 +539,22 @@ object StreamingItaProvider : Provider {
         return embed.replace("\\/", "/")
     }
 
-    private suspend fun httpGet(url: String, referer: String? = null): String = withContext(Dispatchers.IO) {
+    private suspend fun httpGet(url: String, referer: String? = null): String {
         val client = OkHttpClient.Builder().followRedirects(true).followSslRedirects(true).build()
         val reqBuilder = Request.Builder().url(url).header("User-Agent", DEFAULT_USER_AGENT)
         referer?.let { reqBuilder.header("Referer", it) }
-        client.newCall(reqBuilder.build()).execute().use { resp ->
-            resp.body?.string() ?: ""
-        }
+        // `await` ya ejecuta en Dispatchers.IO y cierra el body.
+        return client.await(reqBuilder.build()).use { resp -> resp.body?.string() ?: "" }
     }
 
-    private suspend fun followRedirect(url: String): String = withContext(Dispatchers.IO) {
+    private suspend fun followRedirect(url: String): String {
         val client = OkHttpClient.Builder().followRedirects(true).followSslRedirects(true).build()
         val request = Request.Builder()
             .url(url)
             .header("Referer", baseUrl)
             .header("User-Agent", DEFAULT_USER_AGENT)
             .build()
-        client.newCall(request).execute().use { response ->
-            response.request.url.toString()
-        }
+        return client.await(request).use { response -> response.request.url.toString() }
     }
 
     private fun normalizeUrl(raw: String): String {

@@ -14,6 +14,7 @@ import com.streamflixreborn.streamflix.models.Season
 import com.streamflixreborn.streamflix.models.TvShow
 import com.streamflixreborn.streamflix.models.Video
 import com.streamflixreborn.streamflix.utils.InertiaUtils
+import com.streamflixreborn.streamflix.scrapers.await
 import com.streamflixreborn.streamflix.utils.NetworkClient
 import com.streamflixreborn.streamflix.utils.TmdbUtils
 import com.streamflixreborn.streamflix.utils.UserPreferences
@@ -31,7 +32,6 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Path
 import retrofit2.http.Query
-import android.os.Looper
 import com.google.gson.reflect.TypeToken
 import java.lang.reflect.Type
 import kotlinx.coroutines.sync.Mutex
@@ -142,9 +142,13 @@ class StreamingCommunityProvider(private val _language: String? = null) : Provid
         }
     }
 
-    private fun resolveFinalBaseUrl(startBaseUrl: String): String {
-        if (Looper.myLooper() == Looper.getMainLooper()) return startBaseUrl
-
+    /**
+     * Resuelve el host final siguiendo los redirects. Ahora es `suspend` y ejecuta
+     * la petición fuera del hilo llamador: antes comprobaba el Looper y, si se
+     * llamaba desde el hilo principal, se saltaba la resolución (dejando dominios
+     * obsoletos cacheados).
+     */
+    private suspend fun resolveFinalBaseUrl(startBaseUrl: String): String {
         return try {
             val client = NetworkClient.default.newBuilder()
                 .followRedirects(true)
@@ -157,7 +161,7 @@ class StreamingCommunityProvider(private val _language: String? = null) : Provid
                 .url(startBaseUrl)
                 .get()
                 .build()
-            client.newCall(req).execute().use { resp ->
+            client.await(req).use { resp ->
                 val finalUri = resp.request.url
                 finalUri.scheme + "://" + finalUri.host + "/"
             }
@@ -656,7 +660,7 @@ class StreamingCommunityProvider(private val _language: String? = null) : Provid
                     .create(StreamingCommunityService::class.java)
             }
 
-            fun fetchDocumentWithRedirectsAndSslFallback(url: String, referer: String, language: String): Document {
+            suspend fun fetchDocumentWithRedirectsAndSslFallback(url: String, referer: String, language: String): Document {
                 val client = NetworkClient.default.newBuilder()
                     .followRedirects(true)
                     .followSslRedirects(true)
@@ -664,11 +668,20 @@ class StreamingCommunityProvider(private val _language: String? = null) : Provid
                     .addInterceptor(UserAgentInterceptor(USER_AGENT, { language }))
                     .build()
                 
+                // `await` cambia a Dispatchers.IO y cierra la respuesta.
                 return try {
-                    client.newCall(okhttp3.Request.Builder().url(url).header("X-Requested-With", "XMLHttpRequest").get().build()).execute().use { resp ->
-                        Jsoup.parse(resp.body?.string() ?: "")
+                    client.await(
+                        okhttp3.Request.Builder().url(url)
+                            .header("X-Requested-With", "XMLHttpRequest")
+                            .get()
+                            .build()
+                    ).use { resp ->
+                        Jsoup.parse(resp.body?.string() ?: "", url)
                     }
-                } catch (e: Exception) { Jsoup.parse("") }
+                } catch (e: Exception) {
+                    Log.w(TAG, "fetchDocumentWithRedirectsAndSslFallback failed for $url: ${e.message}")
+                    Jsoup.parse("", url)
+                }
             }
         }
 

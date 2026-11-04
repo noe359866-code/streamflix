@@ -3,6 +3,7 @@ package com.streamflixreborn.streamflix.extractors
 import android.net.Uri
 import androidx.media3.common.MimeTypes
 import com.streamflixreborn.streamflix.models.Video
+import com.streamflixreborn.streamflix.scrapers.awaitText
 import com.streamflixreborn.streamflix.utils.DnsResolver
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -65,8 +66,8 @@ class AfterDarkExtractor( var newUrl: String = "" ) : Extractor() {
                     .header("x-tsr-serverfn", "true")
                     .build()
 
-                val response = client.newCall(request).execute()
-                val body = response.body?.string() ?: continue
+                val body = runCatching { client.awaitText(request) }.getOrNull()
+                if (body.isNullOrBlank()) continue
                 
                 if (body.contains("\"error\":") && body.contains("\"details\":")) continue
 

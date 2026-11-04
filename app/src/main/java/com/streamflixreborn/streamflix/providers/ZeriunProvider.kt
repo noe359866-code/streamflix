@@ -12,6 +12,7 @@ import com.streamflixreborn.streamflix.models.Season
 import com.streamflixreborn.streamflix.models.Show
 import com.streamflixreborn.streamflix.models.TvShow
 import com.streamflixreborn.streamflix.models.Video
+import com.streamflixreborn.streamflix.scrapers.await
 import com.tanasi.retrofit_jsoup.converter.JsoupConverterFactory
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
@@ -191,9 +192,9 @@ object ZeriunProvider : Provider {
             .header("User-Agent", USER_AGENT)
             .build()
 
-        val json = client.newCall(request).execute().use { response ->
-            response.body?.string()
-        } ?: throw Exception("Empty Zeriun embed response")
+        val json = client.await(request).use { response -> response.body?.string() }
+            ?.takeIf { it.isNotBlank() }
+            ?: throw Exception("Empty Zeriun embed response")
 
         val root = JSONObject(json)
         val url = root.optJSONObject("data")

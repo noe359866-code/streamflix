@@ -129,7 +129,10 @@ dependencies {
     implementation "org.nanohttpd:nanohttpd:2.3.1"
     implementation "com.google.zxing:core:3.5.1"
     implementation("org.java-websocket:Java-WebSocket:1.5.3")
-    
+
+    // Unit tests de los scrapers (no requieren dispositivo)
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0'
 }
 
 ksp {

@@ -184,7 +184,7 @@ class VixcloudExtractor(
                 val headersBuilder = okhttp3.Headers.Builder()
                 finalHeaders.forEach { (k, v) -> headersBuilder.add(k, v) }
                 val request = Request.Builder().url(finalUrl).headers(headersBuilder.build()).build()
-                client.newCall(request).execute().use { response ->
+                client.await(request).use { response ->
                     if (response.isSuccessful && response.body != null) {
                         var playlistContent = response.body!!.string()
                         val langCode = preferredLanguage
