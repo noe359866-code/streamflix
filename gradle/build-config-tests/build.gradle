@@ -112,21 +112,29 @@ tasks.register('checkLayoutManifests') {
             }
         }
 
-        // Compare elements and attributes, not just text (query intents have no text).
+        // XmlParser exposes concrete elements, including attributes on empty nodes.
+        // Compare structure rather than text: query intents contain no text.
         def signature
         signature = { node ->
             [
-                node.name(),
+                node.name().toString(),
                 node.attributes().collectEntries { key, value ->
                     [key.toString().tokenize(':').last(), value.toString()]
                 }.sort { it.key },
                 node.children().collect { child -> signature(child) },
             ]
         }
-        def queries = signature(manifests.universal.queries)
-        assert queries[2].size() > 0
-        assert signature(manifests.mobile.queries) == queries
-        assert signature(manifests.tv.queries) == queries
+        def querySignatures = ['universal', 'mobile', 'tv'].collectEntries { layout ->
+            def directory = layout == 'universal' ? 'main' : "main/${layout}"
+            def file = rootProject.file("../../app/src/${directory}/AndroidManifest.xml")
+            def document = new XmlParser(false, false).parse(file)
+            def queries = document.depthFirst().find { it.name() == 'queries' }
+            assert queries != null: "Missing queries for ${layout}"
+            [layout, signature(queries)]
+        }
+        assert querySignatures.universal[2].size() > 0
+        assert querySignatures.mobile == querySignatures.universal
+        assert querySignatures.tv == querySignatures.universal
     }
 }
 
