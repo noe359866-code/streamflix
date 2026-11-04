@@ -8,8 +8,6 @@ import com.streamflixreborn.streamflix.utils.M3uParser
 import okhttp3.*
 import java.util.concurrent.TimeUnit
 
-private typealias M3UChannel = M3uParser.Channel
-
 object IptvSpainProvider : Provider {
 
     override val name = "IPTV Spain"
@@ -47,12 +45,12 @@ object IptvSpainProvider : Provider {
         }
         .build()
 
-    private var cachedChannels: List<M3UChannel>? = null
+    private var cachedChannels: List<M3uParser.Channel>? = null
     private var lastFetchTime: Long = 0
     private const val CACHE_DURATION = 30 * 60 * 1000
 
 
-    private fun createId(channel: M3UChannel): String {
+    private fun createId(channel: M3uParser.Channel): String {
         val rawId = "${channel.url}|${channel.name}|${channel.logo ?: ""}|${channel.userAgent ?: ""}|${channel.referrer ?: ""}"
         return Base64.encodeToString(rawId.toByteArray(), Base64.NO_WRAP)
     }
@@ -81,7 +79,7 @@ object IptvSpainProvider : Provider {
         } catch (e: Exception) { emptyMap() }
     }
 
-    private fun getAllChannels(): List<M3UChannel> {
+    private fun getAllChannels(): List<M3uParser.Channel> {
         val now = System.currentTimeMillis()
         if (cachedChannels != null && (now - lastFetchTime) < CACHE_DURATION) return cachedChannels!!
 
@@ -232,7 +230,7 @@ object IptvSpainProvider : Provider {
         )
     }
 
-    private fun parseM3U(m3uRaw: String): List<M3UChannel> = M3uParser.parse(m3uRaw)
+    private fun parseM3U(m3uRaw: String): List<M3uParser.Channel> = M3uParser.parse(m3uRaw)
 
     override suspend fun getMovies(page: Int): List<Movie> = emptyList()
     override suspend fun getTvShows(page: Int): List<TvShow> {

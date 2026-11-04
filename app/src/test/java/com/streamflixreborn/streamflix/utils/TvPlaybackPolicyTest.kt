@@ -18,7 +18,7 @@ class TvPlaybackPolicyTest {
     @Test fun liveHistoryCanResumeWithoutKnownDuration() = assertEquals(50_000L, TvPlaybackPolicy.resumePosition(60_000, -1))
     @Test fun unknownDurationIsNeverConsideredFinished() {
         assertFalse(TvPlaybackPolicy.hasFinished(60_000, -1))
-        assertFalse(TvPlaybackPolicy.hasReallyFinished(60_000, 0, 10))
+        assertFalse(TvPlaybackPolicy.hasReallyFinished(60_000, 0, 10L))
     }
     @Test fun progressThresholds() {
         assertFalse(TvPlaybackPolicy.hasStarted(0, 120_000))
@@ -27,9 +27,9 @@ class TvPlaybackPolicyTest {
         assertTrue(TvPlaybackPolicy.hasFinished(108_001, 120_000))
     }
     @Test fun completionBuffer() {
-        assertFalse(TvPlaybackPolicy.hasReallyFinished(109_999, 120_000, 10))
-        assertTrue(TvPlaybackPolicy.hasReallyFinished(110_000, 120_000, 10))
-        assertTrue(TvPlaybackPolicy.hasReallyFinished(120_000, 120_000, -5))
+        assertFalse(TvPlaybackPolicy.hasReallyFinished(109_999, 120_000, 10L))
+        assertTrue(TvPlaybackPolicy.hasReallyFinished(110_000, 120_000, 10L))
+        assertTrue(TvPlaybackPolicy.hasReallyFinished(120_000, 120_000, -5L))
     }
     @Test fun seekIsClampedToMediaBounds() {
         assertEquals(0L, TvPlaybackPolicy.seekTarget(5_000, -10_000, 120_000))

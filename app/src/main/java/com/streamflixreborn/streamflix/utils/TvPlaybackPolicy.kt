@@ -18,7 +18,7 @@ object TvPlaybackPolicy {
     fun hasFinished(positionMs: Long, durationMs: Long): Boolean =
         durationMs > 0 && positionMs > durationMs * 0.90
 
-    fun hasReallyFinished(positionMs: Long, durationMs: Long, autoplayBufferSeconds: Int): Boolean =
+    fun hasReallyFinished(positionMs: Long, durationMs: Long, autoplayBufferSeconds: Long): Boolean =
         durationMs > 0 && positionMs >= durationMs - autoplayBufferSeconds.coerceAtLeast(0) * 1_000L
 
     fun seekTarget(positionMs: Long, deltaMs: Long, durationMs: Long): Long {
