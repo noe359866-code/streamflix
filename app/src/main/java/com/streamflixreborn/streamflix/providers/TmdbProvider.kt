@@ -4,6 +4,9 @@ import com.streamflixreborn.streamflix.adapters.AppAdapter
 import com.streamflixreborn.streamflix.extractors.AfterDarkExtractor
 import com.streamflixreborn.streamflix.extractors.Extractor
 import com.streamflixreborn.streamflix.extractors.MoflixExtractor
+import com.streamflixreborn.streamflix.extractors.MovieMasterExtractor
+import com.streamflixreborn.streamflix.extractors.VidemExtractor
+import com.streamflixreborn.streamflix.extractors.VideoappExtractor
 import com.streamflixreborn.streamflix.extractors.MoviesapiExtractor
 import com.streamflixreborn.streamflix.extractors.TwoEmbedExtractor
 import com.streamflixreborn.streamflix.extractors.VidsrcNetExtractor
@@ -822,6 +825,11 @@ class TmdbProvider(override val language: String) : Provider {
                         }
                     }
                     servers.addAll(deferred.awaitAll().flatten())
+                    // Resolvedores con audio latino/castellano: MovieMaster, Videm y
+                    // Videoapp traen pistas ES, así que entran en la lista española.
+                    servers.addAll(MovieMasterExtractor().servers(videoType))
+                    servers.addAll(VidemExtractor().servers(videoType, "es"))
+                    servers.add(VideoappExtractor().server(videoType))
                 }
             }
             else -> {

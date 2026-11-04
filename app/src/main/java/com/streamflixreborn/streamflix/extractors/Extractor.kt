@@ -117,6 +117,14 @@ abstract class Extractor {
             ZillaExtractor(),
             PDrainExtractor(),
             MaxstreamExtractor(),
+            // --- Portados de upstream main (resolvedores de hosts concretos) ---
+            VidemExtractor(),
+            VidloveExtractor(),
+            VideoappExtractor(),
+            HexloadExtractor(),
+            TurbovidExtractor(),
+            DeltaBitExtractor(),
+            FastreamExtractor(),
             // --- Español / latino ---
             // Los extractores genéricos van al final: se usan como último recurso
             // cuando ningún extractor específico coincide con el host.
