@@ -27,8 +27,16 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      # Los runners de GitHub traen el Android SDK preinstalado (ANDROID_HOME).
+      # No se instala nada extra para evitar fallos de red del instalador.
+      - name: Check Android SDK
+        run: |
+          echo "ANDROID_HOME=${ANDROID_HOME}"
+          ls "${ANDROID_HOME}/platforms" || true
+          ls "${ANDROID_HOME}/build-tools" || true
+
+      - name: Accept Android licenses
+        run: yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
 
       - name: Version
         id: version
