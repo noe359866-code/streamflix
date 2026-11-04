@@ -69,6 +69,14 @@ jobs:
             grep -E '^e:|error:|FAILED|What went wrong|Execution failed|Caused by|Unresolved reference|Type mismatch|None of the following' /tmp/tv-unit-build.log | head -50 | while IFS= read -r line; do
               echo "::error::${line}"
             done
+            python3 - <<'PY'
+            import pathlib, xml.etree.ElementTree as ET
+            for path in pathlib.Path('app/build/test-results/testDebugUnitTest').glob('TEST-*.xml'):
+                for case in ET.parse(path).getroot().iter('testcase'):
+                    for failure in case.findall('failure'):
+                        message = failure.attrib.get('message', '').replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+                        print(f"::error::{case.attrib.get('classname')}.{case.attrib.get('name')}: {message}")
+            PY
           fi
           exit $result
       - name: Verify TV APK output

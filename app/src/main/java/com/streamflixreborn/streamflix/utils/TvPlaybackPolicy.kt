@@ -29,6 +29,6 @@ object TvPlaybackPolicy {
     fun showNextEpisodeOverlay(positionMs: Long, durationMs: Long, thresholdMs: Long): Boolean {
         if (durationMs <= 0 || thresholdMs < NEXT_EPISODE_OVERLAY_MIN_THRESHOLD_MS) return false
         val remaining = durationMs - positionMs
-        return remaining in 0..thresholdMs
+        return remaining in 1..thresholdMs
     }
 }

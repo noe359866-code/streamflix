@@ -20,8 +20,9 @@ object M3uParser {
                 line.startsWith("#EXTINF:") -> {
                     fun attr(name: String) = Regex("""$name="([^"]*)"""").find(line)?.groupValues?.get(1)
                     pending = Channel(
-                        // Only the first comma separates duration/attributes from the title.
-                        name = line.substringAfter(',', "").trim(),
+                        // The title starts after the first comma outside quoted
+                        // attributes; channel titles themselves may contain commas.
+                        name = line.substring(titleStart(line)).trim(),
                         url = "",
                         logo = attr("tvg-logo").orEmpty(),
                         group = attr("group-title").orEmpty(),
@@ -46,5 +47,16 @@ object M3uParser {
             }
         }
         return result
+    }
+
+    private fun titleStart(line: String): Int {
+        var quoted = false
+        for ((index, char) in line.withIndex()) {
+            when (char) {
+                '"' -> quoted = !quoted
+                ',' -> if (!quoted) return index + 1
+            }
+        }
+        return line.length
     }
 }

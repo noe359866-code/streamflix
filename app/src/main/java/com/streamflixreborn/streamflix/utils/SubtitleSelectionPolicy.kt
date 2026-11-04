@@ -11,10 +11,11 @@ object SubtitleSelectionPolicy {
         useServerSetting: Boolean,
         serverAutoSubtitlesDisabled: Boolean,
     ): Int? {
+        if (preferredLabel.isNullOrEmpty()) return null
         if (subtitles.any { it.default }) return null
         if (providerLanguage.equals("es", ignoreCase = true)) return null
         if (useServerSetting && serverAutoSubtitlesDisabled) return null
-        return subtitles.indexOfFirst { it.label.startsWith(preferredLabel.orEmpty()) }
+        return subtitles.indexOfFirst { it.label.startsWith(preferredLabel) }
             .takeIf { it >= 0 }
     }
 }
