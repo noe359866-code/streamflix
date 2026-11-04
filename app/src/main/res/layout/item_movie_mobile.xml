@@ -3,9 +3,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackgroundBorderless">
 
     <ImageView
+        android:background="@drawable/bg_poster_rounded"
+        android:clipToOutline="true"
         android:id="@+id/iv_movie_poster"
         android:layout_width="0dp"
         android:layout_height="200dp"
@@ -17,6 +20,7 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
+        android:textAppearance="@style/TextAppearance.App.Badge"
         android:id="@+id/tv_movie_quality"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -31,7 +35,7 @@
         android:shadowDy="2"
         android:shadowRadius="5"
         android:textAllCaps="true"
-        android:textColor="#FFFFFF"
+        android:textColor="?android:attr/textColorPrimary"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="@id/iv_movie_poster"
         app:layout_constraintTop_toTopOf="@id/iv_movie_poster"
@@ -39,6 +43,7 @@
         tools:visibility="visible" />
 
     <TextView
+        android:textAppearance="@style/TextAppearance.App.Caption"
         android:id="@+id/tv_movie_released_year"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -51,7 +56,7 @@
         android:shadowDx="2"
         android:shadowDy="2"
         android:shadowRadius="5"
-        android:textColor="#FFFFFF"
+        android:textColor="?android:attr/textColorPrimary"
         app:layout_constraintEnd_toEndOf="@id/iv_movie_poster"
         app:layout_constraintTop_toBottomOf="@id/tv_movie_quality"
         app:layout_goneMarginTop="6dp"
@@ -73,6 +78,7 @@
         tools:progress="80" />
 
     <TextView
+        android:textAppearance="@style/TextAppearance.App.Subtitle"
         android:id="@+id/tv_movie_title"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -80,7 +86,7 @@
         android:ellipsize="end"
         android:gravity="center_horizontal"
         android:lines="2"
-        android:textColor="#FFFFFF"
+        android:textColor="?android:attr/textColorPrimary"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

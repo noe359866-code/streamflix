@@ -5,4 +5,9 @@
     <attr name="movie_banner_gradient_drawable" format="reference" />
     <attr name="tv_show_banner_gradient_drawable" format="reference" />
     <attr name="category_swiper_gradient_drawable" format="reference" />
+
+    <!-- Superficies y foco (estilo tvOS: tarjetas sutiles + foco con elevación). -->
+    <attr name="surface_color" format="color" />
+    <attr name="surface_color_elevated" format="color" />
+    <attr name="focus_ring_color" format="color" />
 </resources>

@@ -77,8 +77,7 @@
                 android:text="@string/player_next_episode_up_next"
                 android:textAllCaps="true"
                 android:textColor="?android:attr/textColorSecondary"
-                android:textSize="11sp"
-                android:textStyle="bold" />
+                android:textAppearance="@style/TextAppearance.App.Caption" />
 
             <TextView
                 android:id="@+id/tv_next_episode_meta"
@@ -86,8 +85,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:textColor="?android:attr/textColorPrimary"
-                android:textSize="14sp"
-                android:textStyle="bold"
+                android:textAppearance="@style/TextAppearance.App.Body"
                 tools:text="S2 E8" />
 
             <TextView
@@ -98,7 +96,7 @@
                 android:ellipsize="end"
                 android:maxLines="2"
                 android:textColor="?android:attr/textColorPrimary"
-                android:textSize="14sp"
+                android:textAppearance="@style/TextAppearance.App.Body"
                 tools:text="Finale" />
 
             <TextView
@@ -107,7 +105,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:textColor="?android:attr/textColorSecondary"
-                android:textSize="12sp"
+                android:textAppearance="@style/TextAppearance.App.Caption"
                 tools:text="Playing next in 8s" />
 
             <LinearLayout
@@ -131,8 +129,7 @@
                     android:paddingBottom="8dp"
                     android:text="@string/player_next_episode_action"
                     android:textColor="?android:attr/textColorPrimary"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
+                    android:textAppearance="@style/TextAppearance.App.Caption" />
 
                 <ImageView
                     android:id="@+id/btn_next_episode_dismiss"
@@ -170,9 +167,8 @@
             android:id="@+id/tv_brightness_percentage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textAppearance="@style/TextAppearance.App.Caption"
             android:shadowColor="#000000"
             android:shadowDx="1"
             android:shadowDy="1"
@@ -213,9 +209,8 @@
             android:id="@+id/tv_volume_percentage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textAppearance="@style/TextAppearance.App.Caption"
             android:shadowColor="#000000"
             android:shadowDx="1"
             android:shadowDy="1"

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Esquinas de póster estilo tvOS (~4% del ancho de la tarjeta).
+  Se usa como background + clipToOutline para que el recorte sea real y no un
+  overlay, así el foco/elevación respeta la silueta redondeada.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <corners android:radius="@dimen/poster_radius" />
+    <solid android:color="@android:color/transparent" />
+</shape>

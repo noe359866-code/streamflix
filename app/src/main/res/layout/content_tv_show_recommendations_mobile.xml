@@ -12,8 +12,8 @@
         android:layout_marginStart="10dp"
         android:layout_marginEnd="10dp"
         android:text="@string/tv_show_you_may_also_like"
-        android:textColor="#FFFFFF"
-        android:textSize="18sp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:textAppearance="@style/TextAppearance.App.Headline"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Escala tipográfica tipo Apple TV (tvOS): pocos niveles, mucho aire y
+      jerarquía por peso más que por tamaño. Usa Inter, que es la fuente de
+      sistema de facto en Android TV moderna y comparte métrica con SF Pro
+      (altura de x alta, aperturas cerradas), así que los títulos se leen
+      igual de limpios a 3 m de distancia.
+    -->
+
+    <!-- Título de sección / carrusel del home (equivalente a "Row title" de tvOS). -->
+    <style name="TextAppearance.App.Headline" parent="TextAppearance.AppCompat.Headline">
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="android:textSize">21sp</item>
+        <item name="android:letterSpacing">-0.01</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- Título de ficha (póster grande). -->
+    <style name="TextAppearance.App.Title" parent="TextAppearance.AppCompat.Title">
+        <item name="android:fontFamily">@font/inter_bold</item>
+        <item name="android:textSize">26sp</item>
+        <item name="android:letterSpacing">-0.02</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- Título de tarjeta (2 líneas bajo el póster). -->
+    <style name="TextAppearance.App.Subtitle" parent="TextAppearance.AppCompat.Subhead">
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- Cuerpo / sinopsis. -->
+    <style name="TextAppearance.App.Body" parent="TextAppearance.AppCompat.Body1">
+        <item name="android:fontFamily">@font/inter_regular</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:lineSpacingMultiplier">1.25</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- Metadatos (año, duración, calidad): discretos, como en tvOS. -->
+    <style name="TextAppearance.App.Caption" parent="TextAppearance.AppCompat.Caption">
+        <item name="android:fontFamily">@font/inter_regular</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:letterSpacing">0.01</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- Badge (HD/4K, LAT/CAST). Inter con tracking positivo para que respire. -->
+    <style name="TextAppearance.App.Badge" parent="TextAppearance.AppCompat.Caption">
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:letterSpacing">0.06</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- Botones: mismo peso que los "pill" de tvOS. -->
+    <style name="TextAppearance.App.Button" parent="TextAppearance.AppCompat.Button">
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+</resources>
