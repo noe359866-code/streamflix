@@ -113,6 +113,7 @@ interface Provider {
             JKAnimeProvider to ProviderSupport(movies = false, tvShows = true),
             TioAnimeProvider to ProviderSupport(movies = false, tvShows = true),
             PelisflixHdProvider to ProviderSupport(movies = true, tvShows = true),
+            StremioCatalogsProvider to ProviderSupport(movies = true, tvShows = true),
         )
 
         /**
