@@ -131,7 +131,24 @@ jobs:
           enable-hw-keyboard: true
           emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: ./gradlew :app:connectedDebugAndroidTest --stacktrace
+          script: |
+            set +e
+            ./gradlew :app:connectedDebugAndroidTest --stacktrace > /tmp/tv-instrumentation.log 2>&1
+            result=$?
+            if [[ $result -ne 0 ]]; then
+              grep -E '^e:|error:|FAILED|What went wrong|Execution failed|Caused by|Unresolved reference|Type mismatch|Tests on|failed|Exception' /tmp/tv-instrumentation.log | head -60 | while IFS= read -r line; do
+                echo "::error::${line}"
+              done
+              python3 - <<'PY'
+            import pathlib, xml.etree.ElementTree as ET
+            for path in pathlib.Path('app/build/outputs/androidTest-results/connected').rglob('*.xml'):
+                for case in ET.parse(path).getroot().iter('testcase'):
+                    for failure in list(case.findall('failure')) + list(case.findall('error')):
+                        message = failure.attrib.get('message', '').replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+                        print(f"::error::{case.attrib.get('classname')}.{case.attrib.get('name')}: {message}")
+            PY
+            fi
+            exit $result
       - name: Upload TV instrumentation reports
         if: always()
         uses: actions/upload-artifact@v7
