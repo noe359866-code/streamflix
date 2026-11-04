@@ -240,7 +240,14 @@ object JKAnimeProvider : Provider {
     override suspend fun getPeople(id: String, page: Int): People =
         throw UnsupportedOperationException("JKAnime no expone fichas de personas")
 
-    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> {
+    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> =
+        Provider.playableServers(getServersRaw(id, videoType))
+
+    /**
+     * Servidores tal cual los entrega la web. `getServers` filtra después para que
+     * sólo salgan reproductores reales (ver [Provider.playableServers]).
+     */
+    private suspend fun getServersRaw(id: String, videoType: Video.Type): List<Video.Server> {
         val episodeId = (videoType as? Video.Type.Episode)?.id ?: id
         val slug = episodeId.substringBefore('|')
         val number = episodeId.substringAfter('|', "").toIntOrNull() ?: return emptyList()
@@ -287,7 +294,7 @@ object JKAnimeProvider : Provider {
             }
         }
 
-        return servers.distinctBy { it.src }
+        return servers
     }
 
     override suspend fun getVideo(server: Video.Server): Video =

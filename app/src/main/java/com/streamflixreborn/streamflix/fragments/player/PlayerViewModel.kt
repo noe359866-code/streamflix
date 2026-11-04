@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.streamflixreborn.streamflix.models.Video
+import com.streamflixreborn.streamflix.providers.Provider
 import com.streamflixreborn.streamflix.utils.CustomTabHelper
 import com.streamflixreborn.streamflix.utils.EpisodeManager
 import com.streamflixreborn.streamflix.utils.OpenSubtitles
@@ -100,7 +101,11 @@ class PlayerViewModel(
         lastId = id
         _state.emit(State.LoadingServers)
         try {
-            val servers = UserPreferences.currentProvider!!.getServers(id, videoType)
+            // Sólo streams: se descartan soporte/donaciones, redes sociales,
+            // trailers y duplicados antes de mostrar la lista al usuario.
+            val servers = Provider.playableServers(
+                UserPreferences.currentProvider!!.getServers(id, videoType)
+            )
             if (servers.isEmpty()) throw Exception("No servers found")
             
             // LOG POTENZIATO: Mostra tutti i server disponibili per il player

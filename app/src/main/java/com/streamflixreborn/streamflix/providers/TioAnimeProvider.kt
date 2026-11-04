@@ -12,6 +12,7 @@ import com.streamflixreborn.streamflix.models.Show
 import com.streamflixreborn.streamflix.models.TvShow
 import com.streamflixreborn.streamflix.models.Video
 import com.streamflixreborn.streamflix.scrapers.HttpScraper
+import com.streamflixreborn.streamflix.scrapers.StreamLinks
 import com.streamflixreborn.streamflix.utils.NetworkClient
 import java.net.URLEncoder
 import org.jsoup.nodes.Document
@@ -136,7 +137,14 @@ object TioAnimeProvider : Provider {
     override suspend fun getPeople(id: String, page: Int): People =
         throw UnsupportedOperationException("TioAnime no expone fichas de personas")
 
-    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> {
+    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> =
+        Provider.playableServers(getServersRaw(id, videoType))
+
+    /**
+     * Servidores tal cual los entrega la web. `getServers` filtra después para que
+     * sólo salgan reproductores reales (ver [Provider.playableServers]).
+     */
+    private suspend fun getServersRaw(id: String, videoType: Video.Type): List<Video.Server> {
         val slug = id.substringBefore('|')
         val number = id.substringAfter('|', "").toIntOrNull() ?: return emptyList()
         val document = document("$SITE_URL/ver/$slug-$number") ?: return emptyList()
@@ -156,14 +164,15 @@ object TioAnimeProvider : Provider {
             }
             .distinct()
 
-        return embeds.mapIndexed { index, url ->
-            val host = url.substringAfter("//").substringBefore('/').substringBefore('.')
+        val servers = embeds.mapIndexed { index, url ->
+            val host = StreamLinks.displayName(url)
             Video.Server(
                 id = url,
-                name = if (host.isBlank()) "Servidor ${index + 1}" else "${host.replaceFirstChar { it.uppercase() }} · Opción ${index + 1}",
+                name = if (host.isBlank()) "Servidor ${index + 1}" else "$host · Opción ${index + 1}",
                 src = url,
             )
         }
+        return servers
     }
 
     override suspend fun getVideo(server: Video.Server): Video =

@@ -8,6 +8,7 @@ import com.streamflixreborn.streamflix.models.Movie
 import com.streamflixreborn.streamflix.models.People
 import com.streamflixreborn.streamflix.models.TvShow
 import com.streamflixreborn.streamflix.models.Video
+import com.streamflixreborn.streamflix.scrapers.StreamLinks
 import kotlinx.coroutines.sync.Mutex
 
 interface ProviderPortalUrl {
@@ -113,6 +114,14 @@ interface Provider {
             TioAnimeProvider to ProviderSupport(movies = false, tvShows = true),
             PelisflixHdProvider to ProviderSupport(movies = true, tvShows = true),
         )
+
+        /**
+         * Contrato común: un provider **sólo** entrega servidores que son un
+         * stream reproducible. Se descartan enlaces de soporte, donaciones,
+         * grupos de Telegram, trailers y duplicados.
+         */
+        fun playableServers(servers: List<Video.Server>): List<Video.Server> =
+            StreamLinks.sanitize(servers)
 
         // Helper functions to check support
         fun supportsMovies(provider: Provider): Boolean {

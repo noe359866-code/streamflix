@@ -15,6 +15,7 @@ import com.streamflixreborn.streamflix.models.TvShow
 import com.streamflixreborn.streamflix.models.Video
 import com.streamflixreborn.streamflix.scrapers.HttpScraper
 import com.streamflixreborn.streamflix.scrapers.ScraperParsing
+import com.streamflixreborn.streamflix.scrapers.StreamLinks
 import com.streamflixreborn.streamflix.utils.NetworkClient
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
@@ -58,17 +59,6 @@ object PelisflixHdProvider : Provider {
             }.distinctBy { it.id }
             if (shows.isNotEmpty()) categories.add(Category(heading, shows))
         }
-
-        val genres = document.select("a[href*='/genero/']")
-            .map { anchor ->
-                Genre(
-                    id = anchor.attr("abs:href").trimEnd('/').substringAfterLast('/'),
-                    name = anchor.text().trim(),
-                )
-            }
-            .filter { it.name.isNotBlank() }
-            .distinctBy { it.id }
-        if (genres.isNotEmpty()) categories.add(Category("Géneros", genres))
 
         return categories.distinctBy { it.name }
     }
@@ -190,7 +180,14 @@ object PelisflixHdProvider : Provider {
     override suspend fun getPeople(id: String, page: Int): People =
         throw UnsupportedOperationException("PelisflixHD no expone fichas de personas")
 
-    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> {
+    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> =
+        Provider.playableServers(getServersRaw(id, videoType))
+
+    /**
+     * Servidores tal cual los entrega la web. `getServers` filtra después para que
+     * sólo salgan reproductores reales (ver [Provider.playableServers]).
+     */
+    private suspend fun getServersRaw(id: String, videoType: Video.Type): List<Video.Server> {
         val pageUrl = when (videoType) {
             is Video.Type.Movie -> "$SITE_URL/pelicula/$id/"
             is Video.Type.Episode -> {
@@ -203,14 +200,15 @@ object PelisflixHdProvider : Provider {
         }
         val document = document(pageUrl) ?: return emptyList()
 
-        return document.select("#player li[data-server]").mapIndexedNotNull { index, item ->
+        val servers = document.select("#player li[data-server]").mapIndexedNotNull { index, item ->
             val decoded = decodeBase64(item.attr("data-server")) ?: return@mapIndexedNotNull null
-            val url = decoded.substringAfter("|", decoded).ifBlank { decoded }
-            if (!url.startsWith("http")) return@mapIndexedNotNull null
+            val url = decoded.substringAfter("|", decoded).ifBlank { decoded }.trim()
+            if (!StreamLinks.isPlayable(url)) return@mapIndexedNotNull null
             val label = item.selectFirst("span")?.text()?.trim()
                 ?.takeIf { it.isNotBlank() } ?: "Opción ${index + 1}"
             Video.Server(id = url, name = label, src = url)
-        }.distinctBy { it.src }
+        }
+        return servers
     }
 
     override suspend fun getVideo(server: Video.Server): Video {

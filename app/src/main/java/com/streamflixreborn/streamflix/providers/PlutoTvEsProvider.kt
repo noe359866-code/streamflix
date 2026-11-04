@@ -1,7 +1,5 @@
 package com.streamflixreborn.streamflix.providers
 
-import com.streamflixreborn.streamflix.models.Category
-import com.streamflixreborn.streamflix.models.TvShow
 import com.streamflixreborn.streamflix.scrapers.M3UProvider
 
 /**
@@ -11,6 +9,9 @@ import com.streamflixreborn.streamflix.scrapers.M3UProvider
  * BuddyChewChew, que ya trae `group-title` y logos por canal. La lógica de
  * descarga, caché, parseo M3U e inyección de headers al reproducir está en
  * [M3UProvider].
+ *
+ * Sólo se exponen canales con señal reproducible: los items de soporte,
+ * donación o "próximamente" de la lista se filtran en la clase base.
  */
 object PlutoTvEsProvider : M3UProvider() {
 
@@ -24,15 +25,4 @@ object PlutoTvEsProvider : M3UProvider() {
 
     override val ungroupedCategoryName = "General"
     override val homeLimit = 25
-
-    override fun isInfoId(id: String) = id == INFO_REPORT || id == INFO_DONATE
-
-    override fun infoItem(id: String): TvShow = liveSupportItem(id)
-
-    override fun extraCategories(): List<Category> = listOf(
-        Category(
-            name = "Soporte y Ayuda",
-            list = listOf(infoItem(INFO_REPORT)!!, infoItem(INFO_DONATE)!!),
-        )
-    )
 }

@@ -195,7 +195,10 @@ object Cine24hProvider : Provider {
             ?: emptyList()
     } catch (_: Exception) { emptyList() }
 
-    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> = try {
+    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> =
+        Provider.playableServers(getServersRaw(id, videoType))
+
+    private suspend fun getServersRaw(id: String, videoType: Video.Type): List<Video.Server> = try {
         val fullUrl = if (id.startsWith("http")) id else if (videoType is Video.Type.Movie) "$baseUrl/peliculas/$id" else "$baseUrl/series/$id"
         val doc = getDocument(fullUrl)
         val serverElements = doc.select("ul.optnslst li[data-src], .optnslst li")

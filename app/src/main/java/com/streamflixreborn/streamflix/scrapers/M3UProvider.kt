@@ -29,12 +29,25 @@ import com.streamflixreborn.streamflix.providers.Provider
  * - ids autocontenidos (url|nombre|logo|UA|referer) para que la reproducción
  *   reconstruya exactamente los headers del canal;
  * - categorías por `group-title`, búsqueda y paginación por género comunes.
+ *
+ * Contrato: **sólo se entrega lo que es un stream**. Se descartan las entradas
+ * de la lista M3U sin URL reproducible (avisos, "próximamente", canales con
+ * `#EXTVLCOPT` vacío, enlaces a Telegram/paypal) y este provider no genera
+ * items de soporte, donación ni categorías que no sean canales.
  */
 abstract class M3UProvider : Provider {
 
     companion object {
-        const val INFO_REPORT = "creador-info"
-        const val INFO_DONATE = "apoyo-nando"
+        /** Esquemas de URL que jamás son un stream utilizable. */
+        private val STREAM_URL = Regex(
+            """^(?:https?|rtsp|rtsps|rtmp|rtmps|udp|rtp|mms)://[^\s]+""",
+            RegexOption.IGNORE_CASE,
+        )
+
+        private val NON_STREAM_URL = Regex(
+            """^(?:about:|data:|javascript:|mailto:|tel:|intent:|tg:|whatsapp:)""",
+            RegexOption.IGNORE_CASE,
+        )
     }
 
     /** Lista M3U a descargar. */
@@ -63,14 +76,6 @@ abstract class M3UProvider : Provider {
 
     private val tag: String get() = "M3U:${name}"
 
-    /** Categorías extra que se añaden al final del home (p. ej. soporte). */
-    protected open fun extraCategories(): List<Category> = emptyList()
-
-    /** Ids sintéticos (soporte/donaciones) que no son canales reales. */
-    protected open fun isInfoId(id: String): Boolean = false
-
-    protected open fun infoItem(id: String): TvShow? = null
-
     protected open suspend fun getChannels(): List<M3UChannel> =
         channelsCache.getOrFetchOrNull("channels|$playlistUrl") {
             val body = HttpScraper.getText(
@@ -78,8 +83,19 @@ abstract class M3UProvider : Provider {
                 headers = mapOf("User-Agent" to userAgent),
                 attempts = 3,
             ) ?: throw java.io.IOException("No se pudo descargar la lista M3U de $name")
-            M3UParser.parse(body)
+            M3UParser.parse(body).filter(::isPlayableStream)
         }.orEmpty()
+
+    /**
+     * Un canal entra en la app sólo si apunta a algo que se puede reproducir:
+     * http(s), rtsp, rtmp, udp o rtp con host y ruta.
+     */
+    protected fun isPlayableStream(channel: M3UChannel): Boolean {
+        val url = channel.url.trim()
+        if (url.isEmpty() || NON_STREAM_URL.containsMatchIn(url)) return false
+        if (channel.name.isBlank()) return false
+        return STREAM_URL.containsMatchIn(url)
+    }
 
     /** Fuerza una nueva descarga de la lista (p. ej. desde ajustes). */
     suspend fun refreshChannels(): List<M3UChannel> {
@@ -129,8 +145,8 @@ abstract class M3UProvider : Provider {
     override suspend fun getHome(): List<Category> {
         val channels = getChannels()
         if (channels.isEmpty()) {
-            Log.w(tag, "Lista M3U vacía")
-            return extraCategories()
+            Log.w(tag, "Lista M3U vacía o sin streams reproducibles")
+            return emptyList()
         }
 
         val grouped = channels
@@ -161,7 +177,6 @@ abstract class M3UProvider : Provider {
             )
         }
 
-        categories.addAll(extraCategories())
         return categories
     }
 
@@ -189,9 +204,11 @@ abstract class M3UProvider : Provider {
         return channels.drop(start).take(pageSize).map { toTvShow(it) }
     }
 
+    /** Este provider sólo emite señales en directo: no hay catálogo de películas. */
     override suspend fun getMovies(page: Int): List<Movie> = emptyList()
 
-    override suspend fun getMovie(id: String): Movie = Movie(id = id, title = "En vivo", poster = "")
+    override suspend fun getMovie(id: String): Movie =
+        throw UnsupportedOperationException("$name sólo entrega transmisiones en directo")
 
     override suspend fun getGenre(id: String, page: Int): Genre {
         val channels = getChannels()
@@ -213,7 +230,6 @@ abstract class M3UProvider : Provider {
         throw UnsupportedOperationException("$name no expone páginas de personas")
 
     override suspend fun getTvShow(id: String): TvShow {
-        if (isInfoId(id)) return infoItem(id) ?: toTvShow(placeholder(id))
         val channel = decodeId(id)
         return TvShow(
             id = id,
@@ -226,7 +242,6 @@ abstract class M3UProvider : Provider {
     }
 
     override suspend fun getEpisodesBySeason(seasonId: String): List<Episode> {
-        if (isInfoId(seasonId)) return emptyList()
         return listOf(
             Episode(
                 id = seasonId,
@@ -239,13 +254,16 @@ abstract class M3UProvider : Provider {
     }
 
     override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> {
-        if (isInfoId(id)) return emptyList()
-        return listOf(Video.Server(id = id, name = "Señal directa"))
+        val channel = decodeId(id)
+        if (channel.url.isBlank()) return emptyList()
+        return listOf(Video.Server(id = id, name = "Señal directa", src = channel.url))
     }
 
     override suspend fun getVideo(server: Video.Server): Video {
         val channel = decodeId(server.id)
-        if (channel.url.isBlank()) throw Exception("Canal sin URL de streaming")
+        if (channel.url.isBlank() || NON_STREAM_URL.containsMatchIn(channel.url)) {
+            throw Exception("Este item no es un stream reproducible")
+        }
         Log.d(tag, "Play: ${channel.url} (headers: ${channel.headers.keys})")
         return Video(
             source = channel.url,
@@ -258,33 +276,10 @@ abstract class M3UProvider : Provider {
 
     // endregion
 
-    /** Item de "soporte/donación" reutilizado por los providers IPTV en español. */
-    protected fun liveSupportItem(id: String): TvShow {
-        val isReport = id == INFO_REPORT
-        val poster = if (isReport)
-            "https://i.ibb.co/dsknGBHT/Imagen-de-Whats-App-2025-09-06-a-las-19-00-50-e8e5bcaa.jpg"
-        else
-            "https://i.ibb.co/B5gKLkqS/nuevo-formato-2-K-202604112205.jpg"
-        return TvShow(
-            id = id,
-            title = if (isReport) "Reportar problemas" else "Apoya al Proveedor",
-            poster = poster,
-            banner = poster,
-            overview = if (isReport) {
-                "Si algún canal no funciona o encuentras errores en el proveedor, repórtalo en el grupo oficial de Telegram."
-            } else {
-                "Si te gusta el contenido y quieres ayudar a mantener los servidores activos, puedes hacer una donación voluntaria. ¡Gracias por tu apoyo!"
-            },
-            seasons = emptyList(),
-        )
-    }
-
     protected fun toTvShow(channel: M3UChannel): TvShow = TvShow(
         id = encodeId(channel),
         title = channel.name,
         poster = channel.logo,
         banner = channel.logo,
     )
-
-    private fun placeholder(id: String) = M3UChannel(name = id, url = "", logo = null, group = null)
 }

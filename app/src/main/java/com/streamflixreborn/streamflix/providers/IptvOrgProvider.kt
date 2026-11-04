@@ -1,9 +1,5 @@
 package com.streamflixreborn.streamflix.providers
 
-import com.streamflixreborn.streamflix.adapters.AppAdapter
-import com.streamflixreborn.streamflix.models.Category
-import com.streamflixreborn.streamflix.models.Genre
-import com.streamflixreborn.streamflix.models.TvShow
 import com.streamflixreborn.streamflix.scrapers.M3UProvider
 
 /**
@@ -11,8 +7,10 @@ import com.streamflixreborn.streamflix.scrapers.M3UProvider
  *
  * Antes este provider tenía su propio cliente OkHttp, su propio caché con `var`
  * y su propio parser. Ahora hereda de [M3UProvider] y sólo aporta lo específico:
- * la URL de la lista, los grupos que van al home y el índice de categorías
- * oficiales que se ofrece como "géneros" al buscar en vacío.
+ * la URL de la lista y los grupos que van al home.
+ *
+ * No expone "géneros" como items del buscador ni items de soporte: la búsqueda
+ * devuelve directamente canales que se pueden reproducir.
  */
 object IptvOrgProvider : M3UProvider() {
 
@@ -26,37 +24,4 @@ object IptvOrgProvider : M3UProvider() {
         "Animation", "Comedy", "Series", "Entertainment", "News", "Movies", "Sports"
     )
     override val homeLimit = 25
-
-    private val officialCategories = listOf(
-        "Animation", "Auto", "Business", "Classic", "Comedy", "Cooking", "Culture",
-        "Documentary", "Education", "Entertainment", "Family", "General", "Interactive",
-        "Kids", "Legislative", "Lifestyle", "Movies", "Music", "News", "Outdoor",
-        "Public", "Relax", "Religious", "Science", "Series", "Shop", "Sports",
-        "Travel", "Weather", "Undefined",
-    )
-
-    override suspend fun search(query: String, page: Int): List<AppAdapter.Item> {
-        if (query.isBlank()) {
-            return officialCategories.map { name -> Genre(id = name, name = "📂 $name") }
-        }
-        return super.search(query, page)
-    }
-
-    /** IPTV-Org agrupa con `group-title`; el id del género es el propio grupo. */
-    override suspend fun getGenre(id: String, page: Int): Genre {
-        // El original comparaba el grupo por igualdad exacta, pero el nombre del
-        // grupo puede venir con sufijos; la base hace `contains`, más tolerante.
-        return super.getGenre(id, page)
-    }
-
-    override fun extraCategories(): List<Category> = listOf(
-        Category(
-            name = "Soporte y Ayuda",
-            list = listOf(liveSupportItem(INFO_REPORT), liveSupportItem(INFO_DONATE)),
-        )
-    )
-
-    override fun isInfoId(id: String) = id == INFO_REPORT || id == INFO_DONATE
-
-    override fun infoItem(id: String): TvShow = liveSupportItem(id)
 }

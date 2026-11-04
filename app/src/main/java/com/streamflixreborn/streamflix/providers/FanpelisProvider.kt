@@ -14,6 +14,7 @@ import com.streamflixreborn.streamflix.models.TvShow
 import com.streamflixreborn.streamflix.models.Video
 import com.streamflixreborn.streamflix.scrapers.ScraperCache
 import com.streamflixreborn.streamflix.scrapers.ScraperParsing
+import com.streamflixreborn.streamflix.scrapers.StreamLinks
 import com.streamflixreborn.streamflix.utils.NetworkClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -154,7 +155,14 @@ object FanpelisProvider : Provider {
         )
     }
 
-    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> {
+    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> =
+        Provider.playableServers(getServersRaw(id, videoType))
+
+    /**
+     * Servidores tal cual los entrega la web. `getServers` filtra después para que
+     * sólo salgan reproductores reales (ver [Provider.playableServers]).
+     */
+    private suspend fun getServersRaw(id: String, videoType: Video.Type): List<Video.Server> {
         val postId = when (videoType) {
             is Video.Type.Movie -> id.toIntOrNull() ?: service.single(id, "movies").data?.id
             is Video.Type.Episode -> id.toIntOrNull()
@@ -163,12 +171,10 @@ object FanpelisProvider : Provider {
         val embeds = runCatching { service.player(postId).data?.embeds.orEmpty() }
             .getOrDefault(emptyList())
 
-        return embeds.mapNotNull { embed ->
-            val url = embed.url.trim().takeIf { it.startsWith("http") } ?: return@mapNotNull null
-            val host = ScraperParsing.cleanText(url.substringAfter("//").substringBefore('/'))
-                ?.substringBefore('.')
-                ?.replaceFirstChar { it.uppercase() }
-                ?: "Servidor"
+        val servers = embeds.mapNotNull { embed ->
+            val url = embed.url.trim()
+            if (!StreamLinks.isPlayable(url)) return@mapNotNull null
+            val host = StreamLinks.displayName(url)
             val details = listOfNotNull(
                 embed.lang?.takeIf { it.isNotBlank() }?.let { lang -> ifLangIsSpanish(lang) ?: lang.uppercase() },
                 embed.quality?.takeIf { it.isNotBlank() }?.let { quality -> "${quality}p" },
@@ -178,7 +184,8 @@ object FanpelisProvider : Provider {
                 name = if (details.isBlank()) host else "$host · $details",
                 src = url,
             )
-        }.distinctBy { it.src }
+        }
+        return servers
     }
 
     private fun ifLangIsSpanish(value: String): String? = when (value.lowercase(Locale.ROOT)) {

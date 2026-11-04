@@ -230,7 +230,14 @@ object LaCartoonsProvider : Provider {
         throw Exception("Esta función no está disponible en La Cartoons")
     }
 
-    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> {
+    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> =
+        Provider.playableServers(getServersRaw(id, videoType))
+
+    /**
+     * Servidores tal cual los entrega la web. `getServers` filtra después para que
+     * sólo salgan reproductores reales (ver [Provider.playableServers]).
+     */
+    private suspend fun getServersRaw(id: String, videoType: Video.Type): List<Video.Server> {
         val url = if (id.startsWith("http")) id else "$baseUrl$id"
         val doc = service.getPage(url)
         val iframe = doc.selectFirst("iframe[src]")?.attr("src").orEmpty()

@@ -233,7 +233,10 @@ object CableVisionHDProvider : Provider {
     override suspend fun getGenre(id: String, page: Int): Genre = throw Exception("Not supported")
     override suspend fun getPeople(id: String, page: Int): People = throw Exception("Not supported")
 
-    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> = try {
+    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> =
+        Provider.playableServers(getServersRaw(id, videoType))
+
+    private suspend fun getServersRaw(id: String, videoType: Video.Type): List<Video.Server> = try {
         val doc = service.getPage(id)
         val servers = mutableListOf<Video.Server>()
 

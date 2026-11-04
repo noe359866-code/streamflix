@@ -1,7 +1,5 @@
 package com.streamflixreborn.streamflix.providers
 
-import com.streamflixreborn.streamflix.models.Category
-import com.streamflixreborn.streamflix.models.TvShow
 import com.streamflixreborn.streamflix.scrapers.M3UProvider
 
 /**
@@ -20,15 +18,4 @@ object PlutoTvMxProvider : M3UProvider() {
 
     override val ungroupedCategoryName = "General"
     override val homeLimit = 25
-
-    override fun isInfoId(id: String) = id == INFO_REPORT || id == INFO_DONATE
-
-    override fun infoItem(id: String): TvShow = liveSupportItem(id)
-
-    override fun extraCategories(): List<Category> = listOf(
-        Category(
-            name = "Soporte y Ayuda",
-            list = listOf(infoItem(INFO_REPORT)!!, infoItem(INFO_DONATE)!!),
-        )
-    )
 }
