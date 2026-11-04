@@ -55,27 +55,31 @@ tasks.register('checkLayoutManifests') {
     doLast {
         def file = rootProject.file('../../app/src/main/AndroidManifest.xml')
         def manifest = new XmlParser(false, false).parse(file)
-        def android = '{http://schemas.android.com/apk/res/android}'
+        // XmlParser is namespace-unaware here, so attribute keys keep their
+        // android: prefix. Match the local name instead of assuming expansion.
+        def attr = { node, String name ->
+            node.attributes().find { key, value -> key.toString().tokenize(':').last() == name }?.value
+        }
         def features = manifest.children().findAll { it.name() == 'uses-feature' }
-        def leanback = features.find { it.attribute("${android}name") == 'android.software.leanback' }
-        assert leanback?.attribute("${android}required") == 'true'
-        def touchscreen = features.find { it.attribute("${android}name") == 'android.hardware.touchscreen' }
-        assert touchscreen?.attribute("${android}required") == 'false'
+        def leanback = features.find { attr(it, 'name') == 'android.software.leanback' }
+        assert attr(leanback, 'required') == 'true'
+        def touchscreen = features.find { attr(it, 'name') == 'android.hardware.touchscreen' }
+        assert attr(touchscreen, 'required') == 'false'
         def activities = manifest.application.activity.findAll { activity ->
             activity.'intent-filter'.any { filter ->
-                filter.action.any { it.attribute("${android}name") == 'android.intent.action.MAIN' } &&
-                    filter.category.any { it.attribute("${android}name") == 'android.intent.category.LEANBACK_LAUNCHER' }
+                filter.action.any { attr(it, 'name') == 'android.intent.action.MAIN' } &&
+                    filter.category.any { attr(it, 'name') == 'android.intent.category.LEANBACK_LAUNCHER' }
             }
         }
         assert activities.size() == 1
-        assert activities[0].attribute("${android}name") == '.activities.main.MainTvActivity'
+        assert attr(activities[0], 'name') == '.activities.main.MainTvActivity'
         assert manifest.depthFirst().every { node ->
-            !(node instanceof Node) || node.attribute("${android}name") != '.activities.main.MainMobileActivity'
+            !(node instanceof Node) || attr(node, 'name') != '.activities.main.MainMobileActivity'
         }
-        assert manifest.application.attribute("${android}banner") == '@mipmap/ic_banner'
+        assert attr(manifest.application, 'banner') == '@mipmap/ic_banner'
         def queries = manifest.depthFirst().find { it instanceof Node && it.name() == 'queries' }
         assert queries != null
-        assert queries.depthFirst().any { it instanceof Node && it.attribute("${android}mimeType") == 'video/*' }
+        assert queries.depthFirst().any { it instanceof Node && attr(it, 'mimeType') == 'video/*' }
         assert !rootProject.file('../../app/src/main/mobile/AndroidManifest.xml').exists()
         assert !rootProject.file('../../app/src/main/tv/AndroidManifest.xml').exists()
     }

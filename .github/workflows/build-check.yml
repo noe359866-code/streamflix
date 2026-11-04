@@ -31,7 +31,16 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v6
       - name: Test TV-only configuration without Android SDK or credentials
-        run: ./gradlew -p gradle/build-config-tests check --no-configuration-cache --stacktrace
+        run: |
+          set +e
+          ./gradlew -p gradle/build-config-tests check --no-configuration-cache --stacktrace > /tmp/tv-config-tests.log 2>&1
+          result=$?
+          if [[ $result -ne 0 ]]; then
+            grep -E 'What went wrong|Execution failed|assert|Expression|APP_LAYOUT|Missing manifest|No signature|Cannot|error:' /tmp/tv-config-tests.log | head -30 | while IFS= read -r line; do
+              echo "::error::${line}"
+            done
+          fi
+          exit $result
 
   unit-and-build:
     name: TV unit tests and debug APK
