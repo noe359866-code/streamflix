@@ -123,12 +123,13 @@ jobs:
         with:
           api-level: 29
           target: android-tv
-          arch: x86_64
+          arch: x86
           profile: tv_1080p
           cores: 2
           ram-size: 3072M
           disable-animations: true
           enable-hw-keyboard: true
+          emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: ./gradlew :app:connectedDebugAndroidTest --stacktrace
       - name: Upload TV instrumentation reports

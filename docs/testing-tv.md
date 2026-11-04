@@ -17,13 +17,13 @@ Las pruebas de instrumentación desactivan la comprobación de actualizaciones a
 
 ## Emulador local
 
-Usa Android Studio Device Manager para crear un **Android TV 1080p, API 29, x86_64**, o herramientas SDK equivalentes. En Linux necesitas acceso a KVM. Con el AVD TV arrancado:
+Usa Android Studio Device Manager para crear un **Android TV 1080p, API 29, x86**, o herramientas SDK equivalentes. En Linux necesitas acceso a KVM. Con el AVD TV arrancado:
 
 ```bash
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
-CI usa `ReactiveCircus/android-emulator-runner@v2.38.0`, imagen `android-tv`, perfil `tv_1080p`, sin snapshots ni animaciones. Los informes de unidad e instrumentación se conservan como artifacts durante siete días, también cuando falla una prueba.
+CI usa `ReactiveCircus/android-emulator-runner@v2.38.0`, imagen `android-tv`, perfil `tv_1080p` (x86), sin snapshots ni animaciones. Los informes de unidad e instrumentación se conservan como artifacts durante siete días, también cuando falla una prueba.
 
 ## Qué no afirman estas pruebas
 

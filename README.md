@@ -171,6 +171,6 @@ Release output is `app/build/outputs/apk/release/`. CI publishes only `streamfli
 
 This suffix matches the TV-only in-app updater. Publishing requires the `KEYSTORE`, `SIGNING_KEY_ALIAS`, `SIGNING_STORE_PASSWORD`, and `SIGNING_KEY_PASSWORD` repository secrets. Service settings can be supplied through the corresponding repository secrets and are passed as environment variables, not written to files.
 
-The **Android TV quality** workflow runs configuration checks, offline unit tests, a TV debug build, and instrumentation on an API 29 Android TV emulator (`tv_1080p`, x86_64). It runs on pull requests, pushes to `main`/`arena/**`, and manual dispatch. The release workflow reuses this quality gate before signing or publishing; a failed test blocks publication. CI needs no signing or service secrets for the quality checks.
+The **Android TV quality** workflow runs configuration checks, offline unit tests, a TV debug build, and instrumentation on an API 29 Android TV emulator (`tv_1080p`, x86). It runs on pull requests, pushes to `main`/`arena/**`, and manual dispatch. The release workflow reuses this quality gate before signing or publishing; a failed test blocks publication. CI needs no signing or service secrets for the quality checks.
 
 See [`docs/testing-tv.md`](docs/testing-tv.md) for scope, local emulator setup and troubleshooting.
