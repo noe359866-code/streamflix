@@ -154,6 +154,14 @@ object UserPreferences {
             Key.AUTOPLAY_BUFFER.setLong(value)
         }
 
+    /**
+     * Host del último stream que sí reprodujo. Se usa para ponerlo primero la
+     * próxima vez (mismo proveedor/CDN suele seguir funcionando).
+     */
+    var lastGoodServerHost: String?
+        get() = Key.LAST_GOOD_SERVER_HOST.getString()?.takeIf { it.isNotBlank() }
+        set(value) = Key.LAST_GOOD_SERVER_HOST.setString(value)
+
     /** Segundos que salta "Omitir intro". 0 = usar el valor por defecto del resolver. */
     var playerSkipIntroSeconds: Long
         get() = Key.PLAYER_SKIP_INTRO_SECONDS.getLong() ?: 0L
@@ -471,6 +479,7 @@ object UserPreferences {
         FORCE_EXTRA_BUFFERING,
         AUTOPLAY_BUFFER,
         PLAYER_SKIP_INTRO_SECONDS,
+        LAST_GOOD_SERVER_HOST,
         SERVER_AUTO_SUBTITLES_DISABLED,
         ENABLE_TMDB,
         PARENTAL_CONTROL_PIN,

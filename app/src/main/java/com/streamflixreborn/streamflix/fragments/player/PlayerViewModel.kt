@@ -105,10 +105,15 @@ class PlayerViewModel(
         try {
             // Sólo streams: se descartan soporte/donaciones, redes sociales,
             // trailers y duplicados antes de mostrar la lista al usuario.
-            val servers = Provider.playableServers(
+            val rawServers = Provider.playableServers(
                 UserPreferences.currentProvider!!.getServers(id, videoType)
             )
-            if (servers.isEmpty()) throw Exception("No servers found")
+            if (rawServers.isEmpty()) throw Exception("No servers found")
+
+            // El usuario no elige stream: se ordena la lista de mejor a peor y el
+            // player reproduce la primera. El orden es también la cadena de
+            // reintentos cuando un host falla (ver [StreamAutoSelector]).
+            val servers = StreamAutoSelector.order(rawServers, UserPreferences.lastGoodServerHost)
             
             // LOG POTENZIATO: Mostra tutti i server disponibili per il player
             Log.i("StreamFlixES", "[SERVERS LIST] -> Provider: ${UserPreferences.currentProvider!!.name}")

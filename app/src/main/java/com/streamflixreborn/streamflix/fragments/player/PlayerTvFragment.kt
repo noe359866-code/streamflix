@@ -401,6 +401,8 @@ class PlayerTvFragment : Fragment() {
                         }
 
                         is PlayerViewModel.State.FailedLoadingVideo -> {
+                            // El host falló: el reintento lo deja al final de la lista.
+                            StreamAutoSelector.markFailed(state.server)
                             val nextServer = servers.getOrNull(servers.indexOf(state.server) + 1)
                             if (nextServer != null) {
                                 viewModel.getVideo(nextServer)
@@ -1015,6 +1017,38 @@ class PlayerTvFragment : Fragment() {
             }
         }
 
+
+    // region auto-selección de stream
+
+    /**
+     * Se llama cuando el media ya elegido no reproduce (403, host caído, m3u8
+     * roto). En vez de dejar al usuario en una pantalla negra o mandarlo a
+     * Ajustes → Servidores, se toma el siguiente de la lista ordenada por
+     * [StreamAutoSelector] y se reintenta solo.
+     */
+    private fun tryNextServerOnPlaybackFailure() {
+        val failed = currentServer ?: return
+        val currentIndex = servers.indexOfFirst { it.id == failed.id }
+        if (currentIndex < 0) return
+
+        StreamAutoSelector.markFailed(failed)
+
+        // El usuario puede haber elegido un servidor a mano: sólo se encadena un
+        // fallo por servidor para no entrar en un bucle de reintentos.
+        if (failed.id in autoFallbackTried) return
+        autoFallbackTried += failed.id
+
+        val next = servers.getOrNull(currentIndex + 1)
+        if (next != null) {
+            Log.i("Player", "Fallo al reproducir ${failed.name}; probando ${next.name}")
+            viewModel.getVideo(next)
+        }
+    }
+
+    private val autoFallbackTried = mutableSetOf<String>()
+
+    // endregion
+
         private fun displayVideo(
             video: Video,
             server: Video.Server,
@@ -1023,6 +1057,10 @@ class PlayerTvFragment : Fragment() {
         ) {
             currentVideo = video
             currentServer = server
+            // Memoria de qué host funciona: la próxima vez se intenta primero
+            // (ver [StreamAutoSelector]).
+            StreamAutoSelector.markWorked(server)
+            UserPreferences.lastGoodServerHost = StreamAutoSelector.hostKey(server)
             updatePlayerHeader()
             val extraBuffering = PlayerSettingsView.Settings.ExtraBuffering.isEnabled
             val softwareDecoder = PlayerSettingsView.Settings.SoftwareDecoder.isEnabled
@@ -1290,6 +1328,7 @@ class PlayerTvFragment : Fragment() {
                 override fun onPlayerError(error: PlaybackException) {
                     super.onPlayerError(error)
                     Log.e("PlayerTvFragment", "onPlayerError: ", error)
+                    tryNextServerOnPlaybackFailure()
                 }
             })
 

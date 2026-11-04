@@ -216,7 +216,7 @@
     <string name="player_settings_speed_1_75">× 1.75</string>
     <string name="player_settings_speed_2">× 2</string>
     <string name="player_settings_servers_title">Servers</string>
-    <string name="player_settings_servers_label">Servers</string>
+    <string name="player_settings_servers_label">Cambia stream</string>
 
     <string name="settings_about">Informazioni</string>
     <string name="settings_about_version">Versione</string>
