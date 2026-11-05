@@ -131,7 +131,7 @@ fun AppleTvProfileSettingsScreen(
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(20.dp),
-            contentPadding = PaddingValues(horizontal = 56.dp, top = 16.dp, bottom = 52.dp),
+            contentPadding = PaddingValues(start = 56.dp, top = 16.dp, end = 56.dp, bottom = 52.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
             item(key = "header") {
