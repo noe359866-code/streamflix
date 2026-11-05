@@ -7,6 +7,8 @@ on:
       - 'main'
     paths-ignore:
       - '**.md'
+      - 'gradle-build.log'
+      - 'gradle-tail.log'
   workflow_dispatch:
 
 jobs:
@@ -34,37 +36,35 @@ jobs:
           ./gradlew assembleDebug --stacktrace 2>&1 | tee gradle-build.log
           EC=${PIPESTATUS[0]}
           echo "exit_code=$EC" >> $GITHUB_OUTPUT
+          tail -n 300 gradle-build.log > gradle-tail.log || true
           if [ "$EC" != "0" ]; then
             echo "::error::Gradle assembleDebug FAILED with exit $EC"
             echo "===== TAIL 200 LINES ====="
             tail -n 200 gradle-build.log || true
             echo "===== GREP FAILED / error: ====="
-            grep -i -E "FAILED|error:|e: " gradle-build.log | head -n 100 || true
+            grep -i -E "FAILED|error:|e: " gradle-build.log | head -n 80 || true
             exit $EC
           fi
 
-      - name: Publish Gradle log to debug branch (always)
+      - name: Publish Gradle log to repo (for sandbox fetch)
         if: always()
         run: |
           set +e
-          echo "Publishing gradle log to debug branch for sandbox fetch..."
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Save log even if build succeeded
-          cp gradle-build.log /tmp/gradle-build.log 2>/dev/null || echo "no log" > /tmp/gradle-build.log
-          tail -n 2000 /tmp/gradle-build.log > /tmp/gradle-tail.log 2>/dev/null || true
-          # Push to dedicated CI log branch
-          git fetch origin arena/f3c71883-streamflix-ci-log 2>/dev/null || true
-          git checkout --orphan ci-log-tmp
-          git rm -rf . 2>/dev/null || true
-          cp /tmp/gradle-build.log ./gradle-build.log 2>/dev/null || true
-          cp /tmp/gradle-tail.log ./gradle-tail.log 2>/dev/null || true
-          echo "Run: $GITHUB_RUN_ID" > run-id.txt
-          echo "Ref: $GITHUB_REF" >> run-id.txt
-          git add gradle-build.log gradle-tail.log run-id.txt
-          git commit -m "ci: gradle log for run $GITHUB_RUN_ID (exit ${{ steps.build.outputs.exit_code || 'unknown' }})" || true
-          git push origin HEAD:arena/f3c71883-streamflix-ci-log --force
-          echo "Pushed log branch"
+          # Ensure we are on the correct branch
+          git fetch origin ${{ github.ref_name }} 2>/dev/null || true
+          # Copy logs to repo root (they are already there, but ensure tail exists)
+          ls -lh gradle-build.log gradle-tail.log 2>/dev/null || true
+          git add -f gradle-build.log gradle-tail.log 2>/dev/null || true
+          git status --short
+          if git diff --cached --quiet; then
+            echo "No log changes to commit"
+            exit 0
+          fi
+          git commit -m "[skip ci] ci: gradle log for run $GITHUB_RUN_ID (exit ${{ steps.build.outputs.exit_code || 'unknown' }})"
+          git push origin HEAD:${{ github.ref_name }}
+          echo "Pushed log"
 
       - name: Upload Gradle log
         if: always()
