@@ -51,14 +51,16 @@ jobs:
         run: |
           set -x
           ls -lh gradle-build.log gradle-tail.log || true
+          wc -l gradle-build.log gradle-tail.log || true
+          cp gradle-build.log /tmp/saved-build.log 2>/dev/null || echo "no log at publish start" > /tmp/saved-build.log
+          cp gradle-tail.log /tmp/saved-tail.log 2>/dev/null || echo "no tail at publish start" > /tmp/saved-tail.log
+          ls -lh /tmp/saved* || true
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin arena/f3c71883-streamflix --depth=1 || true
-          # Create log commit on dedicated branch
           git checkout --orphan ci-log-tmp
           git rm -rf . 2>/dev/null || true
-          cp $GITHUB_WORKSPACE/gradle-build.log ./gradle-build.log 2>/dev/null || echo "no log" > ./gradle-build.log
-          cp $GITHUB_WORKSPACE/gradle-tail.log ./gradle-tail.log 2>/dev/null || echo "no tail" > ./gradle-tail.log
+          cp /tmp/saved-build.log ./gradle-build.log
+          cp /tmp/saved-tail.log ./gradle-tail.log
           echo "$GITHUB_RUN_ID" > run-id.txt
           git add gradle-build.log gradle-tail.log run-id.txt
           git commit -m "ci log $GITHUB_RUN_ID exit ${{ steps.build.outputs.exit_code || 'unknown' }}" || true
