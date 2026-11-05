@@ -1,0 +1,302 @@
+Downloading https://services.gradle.org/distributions/gradle-8.14-bin.zip
+.............10%.............20%.............30%.............40%.............50%.............60%.............70%.............80%.............90%..............100%
+
+Welcome to Gradle 8.14!
+
+Here are the highlights of this release:
+ - Java 24 support
+ - GraalVM Native Image toolchain selection
+ - Enhancements to test reporting
+ - Build Authoring improvements
+
+For more details see https://docs.gradle.org/8.14/release-notes.html
+
+Starting a Gradle Daemon (subsequent builds will be faster)
+Configuration on demand is an incubating feature.
+Calculating task graph as no cached configuration is available for tasks: assembleDebug
+> Task :retrofit-jsoup-converter:preBuild UP-TO-DATE
+> Task :navigation:preBuild UP-TO-DATE
+> Task :app:preBuild UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :navigation:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :retrofit-jsoup-converter:preDebugBuild UP-TO-DATE
+> Task :retrofit-jsoup-converter:generateDebugResValues
+> Task :navigation:generateDebugResValues
+> Task :app:generateDebugResValues
+> Task :navigation:generateDebugResources
+> Task :retrofit-jsoup-converter:generateDebugResources
+> Task :app:generateDebugResources
+> Task :retrofit-jsoup-converter:packageDebugResources
+> Task :navigation:processDebugNavigationResources
+> Task :retrofit-jsoup-converter:processDebugNavigationResources
+> Task :navigation:packageDebugResources
+> Task :app:packageDebugResources
+> Task :navigation:parseDebugLocalResources
+> Task :navigation:generateDebugRFile
+> Task :retrofit-jsoup-converter:parseDebugLocalResources
+> Task :retrofit-jsoup-converter:generateDebugRFile
+> Task :app:generateDebugBuildConfig
+> Task :app:dataBindingMergeDependencyArtifactsDebug
+> Task :app:processDebugNavigationResources
+> Task :navigation:writeDebugAarMetadata
+> Task :retrofit-jsoup-converter:writeDebugAarMetadata
+> Task :app:parseDebugLocalResources
+> Task :app:checkDebugAarMetadata
+> Task :app:mapDebugSourceSetPaths
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :navigation:extractDeepLinksDebug
+> Task :app:generateSafeArgsDebug
+> Task :navigation:processDebugManifest
+> Task :app:compileDebugNavigationResources
+> Task :retrofit-jsoup-converter:processDebugManifest
+> Task :retrofit-jsoup-converter:extractDeepLinksDebug FROM-CACHE
+> Task :navigation:compileDebugLibraryResources
+> Task :navigation:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :retrofit-jsoup-converter:compileDebugLibraryResources
+> Task :navigation:javaPreCompileDebug
+> Task :retrofit-jsoup-converter:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:processDebugManifestForPackage
+> Task :retrofit-jsoup-converter:javaPreCompileDebug FROM-CACHE
+
+> Task :app:mergeDebugResources
+/home/runner/work/streamflix/streamflix/app/src/main/res/values/strings.xml:72:4: Multiple substitutions specified in non-positional format of string resource string/episode_item_info. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values/strings.xml:98:4: Multiple substitutions specified in non-positional format of string resource string/episode_item_info_episode_only. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values/strings.xml:90:4: Multiple substitutions specified in non-positional format of string resource string/movie_runtime_hours_minutes. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values/strings.xml:109:4: Multiple substitutions specified in non-positional format of string resource string/player_subtitle_tv_show. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values/strings.xml:383:4: Multiple substitutions specified in non-positional format of string resource string/player_subtitle_tv_show_episode_only. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values/strings.xml:76:4: Multiple substitutions specified in non-positional format of string resource string/tv_show_item_season_number_episode_number. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values/strings.xml:79:4: Multiple substitutions specified in non-positional format of string resource string/tv_show_runtime_hours_minutes. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values/strings.xml:86:4: Multiple substitutions specified in non-positional format of string resource string/tv_show_watch_season_episode. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-pl/strings.xml:54:4: Multiple substitutions specified in non-positional format of string resource string/episode_item_info. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-pl/strings.xml:77:4: Multiple substitutions specified in non-positional format of string resource string/episode_item_info_episode_only. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-pl/strings.xml:90:4: Multiple substitutions specified in non-positional format of string resource string/player_subtitle_tv_show. Did you mean to add the formatted="false" attribute?
+/home/runner/.gradle/caches/8.14/transforms/6c3377e7c8687c8524ed06f315ff2238/transformed/preference-1.2.1/res/values-pl/values-pl.xml:5:4: Multiple substitutions specified in non-positional format of string resource string/player_subtitle_tv_show_episode_only. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-pl/strings.xml:58:4: Multiple substitutions specified in non-positional format of string resource string/tv_show_item_season_number_episode_number. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-pl/strings.xml:60:4: Multiple substitutions specified in non-positional format of string resource string/tv_show_runtime_hours_minutes. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-pl/strings.xml:67:4: Multiple substitutions specified in non-positional format of string resource string/tv_show_watch_season_episode. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-it/strings.xml:64:4: Multiple substitutions specified in non-positional format of string resource string/episode_item_info. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-it/strings.xml:90:4: Multiple substitutions specified in non-positional format of string resource string/episode_item_info_episode_only. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-it/strings.xml:82:4: Multiple substitutions specified in non-positional format of string resource string/movie_runtime_hours_minutes. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-it/strings.xml:101:4: Multiple substitutions specified in non-positional format of string resource string/player_subtitle_tv_show. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-it/strings.xml:341:4: Multiple substitutions specified in non-positional format of string resource string/player_subtitle_tv_show_episode_only. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-it/strings.xml:68:4: Multiple substitutions specified in non-positional format of string resource string/tv_show_item_season_number_episode_number. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-it/strings.xml:71:4: Multiple substitutions specified in non-positional format of string resource string/tv_show_runtime_hours_minutes. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-it/strings.xml:78:4: Multiple substitutions specified in non-positional format of string resource string/tv_show_watch_season_episode. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-ar/strings.xml:58:1: Multiple substitutions specified in non-positional format of string resource string/episode_item_info. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-ar/strings.xml:84:1: Multiple substitutions specified in non-positional format of string resource string/episode_item_info_episode_only. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-ar/strings.xml:76:1: Multiple substitutions specified in non-positional format of string resource string/movie_runtime_hours_minutes. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-ar/strings.xml:95:1: Multiple substitutions specified in non-positional format of string resource string/player_subtitle_tv_show. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-ar/strings.xml:385:4: Multiple substitutions specified in non-positional format of string resource string/player_subtitle_tv_show_episode_only. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-ar/strings.xml:62:1: Multiple substitutions specified in non-positional format of string resource string/tv_show_item_season_number_episode_number. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-ar/strings.xml:65:1: Multiple substitutions specified in non-positional format of string resource string/tv_show_runtime_hours_minutes. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-ar/strings.xml:72:1: Multiple substitutions specified in non-positional format of string resource string/tv_show_watch_season_episode. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-es/strings.xml:72:4: Multiple substitutions specified in non-positional format of string resource string/episode_item_info. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-es/strings.xml:98:4: Multiple substitutions specified in non-positional format of string resource string/episode_item_info_episode_only. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-es/strings.xml:90:4: Multiple substitutions specified in non-positional format of string resource string/movie_runtime_hours_minutes. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-es/strings.xml:109:4: Multiple substitutions specified in non-positional format of string resource string/player_subtitle_tv_show. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-es/strings.xml:382:4: Multiple substitutions specified in non-positional format of string resource string/player_subtitle_tv_show_episode_only. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-es/strings.xml:76:4: Multiple substitutions specified in non-positional format of string resource string/tv_show_item_season_number_episode_number. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-es/strings.xml:79:4: Multiple substitutions specified in non-positional format of string resource string/tv_show_runtime_hours_minutes. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-es/strings.xml:86:4: Multiple substitutions specified in non-positional format of string resource string/tv_show_watch_season_episode. Did you mean to add the formatted="false" attribute?
+
+> Task :app:javaPreCompileDebug
+> Task :app:mergeDebugShaders
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :navigation:mergeDebugShaders
+> Task :navigation:compileDebugShaders NO-SOURCE
+> Task :navigation:generateDebugAssets UP-TO-DATE
+> Task :navigation:mergeDebugAssets
+> Task :retrofit-jsoup-converter:mergeDebugShaders
+> Task :retrofit-jsoup-converter:compileDebugShaders NO-SOURCE
+> Task :retrofit-jsoup-converter:generateDebugAssets UP-TO-DATE
+> Task :retrofit-jsoup-converter:mergeDebugAssets
+
+> Task :app:mergeDebugResources
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-fr/strings.xml:62:4: Multiple substitutions specified in non-positional format of string resource string/episode_item_info. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-fr/strings.xml:88:4: Multiple substitutions specified in non-positional format of string resource string/episode_item_info_episode_only. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-fr/strings.xml:80:4: Multiple substitutions specified in non-positional format of string resource string/movie_runtime_hours_minutes. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-fr/strings.xml:99:4: Multiple substitutions specified in non-positional format of string resource string/player_subtitle_tv_show. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-fr/strings.xml:342:4: Multiple substitutions specified in non-positional format of string resource string/player_subtitle_tv_show_episode_only. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-fr/strings.xml:66:4: Multiple substitutions specified in non-positional format of string resource string/tv_show_item_season_number_episode_number. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-fr/strings.xml:69:4: Multiple substitutions specified in non-positional format of string resource string/tv_show_runtime_hours_minutes. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-fr/strings.xml:76:4: Multiple substitutions specified in non-positional format of string resource string/tv_show_watch_season_episode. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-de/strings.xml:63:4: Multiple substitutions specified in non-positional format of string resource string/episode_item_info. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-de/strings.xml:89:4: Multiple substitutions specified in non-positional format of string resource string/episode_item_info_episode_only. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-de/strings.xml:81:4: Multiple substitutions specified in non-positional format of string resource string/movie_runtime_hours_minutes. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-de/strings.xml:100:4: Multiple substitutions specified in non-positional format of string resource string/player_subtitle_tv_show. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-de/strings.xml:397:4: Multiple substitutions specified in non-positional format of string resource string/player_subtitle_tv_show_episode_only. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-de/strings.xml:67:4: Multiple substitutions specified in non-positional format of string resource string/tv_show_item_season_number_episode_number. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-de/strings.xml:70:4: Multiple substitutions specified in non-positional format of string resource string/tv_show_runtime_hours_minutes. Did you mean to add the formatted="false" attribute?
+/home/runner/work/streamflix/streamflix/app/src/main/res/values-de/strings.xml:77:4: Multiple substitutions specified in non-positional format of string resource string/tv_show_watch_season_episode. Did you mean to add the formatted="false" attribute?
+
+> Task :app:mergeDebugAssets
+> Task :app:compressDebugAssets
+> Task :app:dataBindingGenBaseClassesDebug
+> Task :app:processDebugResources
+> Task :app:desugarDebugFileDependencies
+> Task :retrofit-jsoup-converter:compileDebugKotlin
+> Task :retrofit-jsoup-converter:compileDebugJavaWithJavac NO-SOURCE
+> Task :retrofit-jsoup-converter:bundleLibCompileToJarDebug
+> Task :retrofit-jsoup-converter:bundleLibRuntimeToJarDebug
+> Task :app:checkDebugDuplicateClasses
+> Task :retrofit-jsoup-converter:processDebugJavaRes
+> Task :retrofit-jsoup-converter:bundleLibRuntimeToDirDebug
+> Task :navigation:compileDebugKotlin
+> Task :navigation:compileDebugJavaWithJavac NO-SOURCE
+> Task :navigation:bundleLibCompileToJarDebug
+> Task :app:l8DexDesugarLibDebug
+> Task :app:mergeExtDexDebug
+> Task :app:mergeDebugJniLibFolders
+> Task :app:kspDebugKotlin
+> Task :navigation:processDebugJavaRes
+> Task :navigation:bundleLibRuntimeToJarDebug
+> Task :navigation:bundleLibRuntimeToDirDebug
+> Task :navigation:mergeDebugJniLibFolders
+> Task :navigation:mergeDebugNativeLibs NO-SOURCE
+> Task :navigation:copyDebugJniLibsProjectOnly
+> Task :retrofit-jsoup-converter:mergeDebugJniLibFolders
+> Task :retrofit-jsoup-converter:mergeDebugNativeLibs NO-SOURCE
+> Task :app:mergeLibDexDebug
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
+> Task :retrofit-jsoup-converter:copyDebugJniLibsProjectOnly
+> Task :navigation:checkDebugAarMetadata
+> Task :navigation:stripDebugDebugSymbols NO-SOURCE
+> Task :navigation:copyDebugJniLibsProjectAndLocalJars
+> Task :app:mergeDebugNativeLibs
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libconscrypt_jni.so. Run with --info option to learn more.
+
+> Task :navigation:extractDeepLinksForAarDebug
+> Task :navigation:mergeDebugGeneratedProguardFiles
+> Task :navigation:mergeDebugConsumerProguardFiles
+> Task :navigation:prepareDebugArtProfile
+> Task :navigation:prepareLintJarForPublish
+> Task :navigation:mergeDebugJavaResource
+> Task :retrofit-jsoup-converter:checkDebugAarMetadata
+> Task :retrofit-jsoup-converter:stripDebugDebugSymbols NO-SOURCE
+> Task :retrofit-jsoup-converter:copyDebugJniLibsProjectAndLocalJars
+> Task :navigation:extractDebugAnnotations
+> Task :retrofit-jsoup-converter:extractDebugAnnotations
+> Task :retrofit-jsoup-converter:extractDeepLinksForAarDebug FROM-CACHE
+> Task :retrofit-jsoup-converter:mergeDebugGeneratedProguardFiles
+> Task :retrofit-jsoup-converter:mergeDebugConsumerProguardFiles
+> Task :retrofit-jsoup-converter:prepareDebugArtProfile
+> Task :navigation:syncDebugLibJars
+> Task :retrofit-jsoup-converter:prepareLintJarForPublish
+> Task :navigation:bundleDebugAar
+> Task :navigation:assembleDebug
+> Task :retrofit-jsoup-converter:mergeDebugJavaResource
+> Task :retrofit-jsoup-converter:syncDebugLibJars
+> Task :retrofit-jsoup-converter:bundleDebugAar
+> Task :retrofit-jsoup-converter:assembleDebug
+> Task :app:compileDebugKotlin
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/StreamFlixApp.kt:71:22 'static field TRIM_MEMORY_RUNNING_LOW: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/activities/main/MainMobileActivity.kt:106:16 'var statusBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/activities/main/MainMobileActivity.kt:107:16 'var navigationBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/activities/main/MainMobileActivity.kt:577:16 'var statusBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/activities/main/MainMobileActivity.kt:578:16 'var navigationBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/activities/main/MainTvActivity.kt:49:16 'var statusBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/activities/main/MainTvActivity.kt:50:16 'var navigationBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/activities/tools/BypassWebViewActivity.kt:136:13 'var databaseEnabled: Boolean' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/activities/tools/QrScannerActivity.kt:225:16 'fun createCaptureSession(p0: (Mutable)List<Surface!>, p1: CameraCaptureSession.StateCallback, p2: Handler?): Unit' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/activities/tools/QrScannerActivity.kt:310:16 'var statusBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/activities/tools/QrScannerActivity.kt:311:16 'var navigationBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/adapters/viewholders/CategoryViewHolder.kt:210:13 'when' is exhaustive so 'else' is redundant here.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/database/AniWorldDatabase.kt:26:26 'fun fallbackToDestructiveMigration(): RoomDatabase.Builder<AniWorldDatabase>' is deprecated. Replace by overloaded version with parameter to indicate if all tables should be dropped or not.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/database/SerienStreamDatabase.kt:26:22 'fun fallbackToDestructiveMigration(): RoomDatabase.Builder<SerienStreamDatabase>' is deprecated. Replace by overloaded version with parameter to indicate if all tables should be dropped or not.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/fragments/home/HomeViewModel.kt:135:25 'when' is exhaustive so 'else' is redundant here.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/fragments/home/HomeViewModel.kt:256:33 Check for instance is always 'true'.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/fragments/home/HomeViewModel.kt:257:33 'when' is exhaustive so 'else' is redundant here.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/fragments/home/HomeViewModel.kt:265:33 Check for instance is always 'true'.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/fragments/home/HomeViewModel.kt:266:33 'when' is exhaustive so 'else' is redundant here.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/fragments/player/settings/PlayerSettingsMobileView.kt:550:25 'when' is exhaustive so 'else' is redundant here.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/fragments/settings/SettingsTvFragment.kt:748:21 'fun overridePendingTransition(p0: Int, p1: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/fragments/settings/SettingsTvFragment.kt:769:21 'fun overridePendingTransition(p0: Int, p1: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/profiles/TvProfileDatabase.kt:33:22 'fun fallbackToDestructiveMigration(): RoomDatabase.Builder<TvProfileDatabase>' is deprecated. Replace by overloaded version with parameter to indicate if all tables should be dropped or not.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/search/TvVoiceSearchActivity.kt:35:16 'var statusBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/search/TvVoiceSearchActivity.kt:36:16 'var navigationBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/tv/components/AppleTvVirtualKeyboard.kt:112:41 'constructor(p0: String!): Locale' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/tv/components/AppleTvVirtualKeyboard.kt:114:41 'constructor(p0: String!): Locale' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/tv/components/AppleTvVirtualKeyboard.kt:126:37 'constructor(p0: String!): Locale' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/tv/player/AppleTvPlayerScreen.kt:1628:41 'constructor(p0: String!): Locale' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/tv/player/AppleTvPlayerScreen.kt:1629:60 'constructor(p0: String!): Locale' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/ui/UserDataNotifier.kt:14:10 This declaration is in a preview state and can be changed in a backwards-incompatible manner with a best-effort migration. Its usage should be marked with '@kotlinx.coroutines.FlowPreview' or '@OptIn(kotlinx.coroutines.FlowPreview::class)' if you accept the drawback of relying on preview API
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/utils/JsUnpacker.kt:36:31 Java type mismatch: inferred type is 'String?', but 'CharSequence' was expected.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/utils/JsUnpacker.kt:38:31 Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'String?'.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/utils/JsUnpacker.kt:42:30 Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'String?'.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/utils/JsUnpacker.kt:46:29 Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'String?'.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/utils/JsUnpacker.kt:50:29 Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'String?'.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/utils/JsUnpacker.kt:64:39 Java type mismatch: inferred type is 'String?', but 'String' was expected.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/utils/JsUnpacker.kt:74:57 Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'String?'.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/utils/OpenSubtitles.kt:29:21 Java type mismatch: inferred type is 'String?', but 'String' was expected.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/utils/ThemeManager.kt:22:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/utils/ThemeManager.kt:23:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/utils/ThemeManager.kt:24:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/utils/ThemeManager.kt:25:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/utils/ThemeManager.kt:26:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/utils/ThemeManager.kt:27:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/utils/ThemeManager.kt:28:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/utils/WebViewResolver.kt:78:17 'var databaseEnabled: Boolean' is deprecated. Deprecated in Java.
+
+> Task :app:processDebugJavaRes
+> Task :app:mergeDebugJavaResource
+
+> Task :app:compileDebugJavaWithJavac
+Note: /home/runner/work/streamflix/streamflix/app/src/main/java/com/streamflixreborn/streamflix/utils/AADecoder.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :app:dexBuilderDebug
+> Task :app:mergeDebugGlobalSynthetics
+> Task :app:mergeProjectDexDebug
+> Task :app:packageDebug
+> Task :app:assembleDebug
+> Task :app:createDebugApkListingFileRedirect
+
+[Incubating] Problems report is available at: file:///home/runner/work/streamflix/streamflix/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 6m 15s
+106 actionable tasks: 103 executed, 3 from cache
+Configuration cache entry stored.
