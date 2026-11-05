@@ -103,12 +103,12 @@ open class VeevExtractor : Extractor() {
             throw Exception("Video removed")
         }
     }
+    /** La app sólo entrega HLS y MP4: el resto de MIME se resuelve por extensión. */
     fun String.toExoPlayerMimeType(): String {
         return when (this.lowercase()) {
-            "video/x-matroska", "video/webm" -> MimeTypes.VIDEO_MATROSKA
-            "video/mp4" -> MimeTypes.VIDEO_MP4
-            "application/x-mpegurl", "application/vnd.apple.mpegurl" -> MimeTypes.APPLICATION_M3U8
-            "video/avi" -> MimeTypes.VIDEO_AVI
+            "video/mp4", "video/x-m4v" -> MimeTypes.VIDEO_MP4
+            "application/x-mpegurl", "application/vnd.apple.mpegurl", "video/mp2t", "video/x-flv" ->
+                MimeTypes.APPLICATION_M3U8
             else -> ""
         }
     }

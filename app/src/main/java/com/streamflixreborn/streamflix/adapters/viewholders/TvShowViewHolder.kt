@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.AnimationUtils
 import android.widget.ImageView
 import android.widget.Toast
 import android.util.Log
@@ -21,6 +20,7 @@ import androidx.viewbinding.ViewBinding
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.streamflixreborn.streamflix.R
+import com.streamflixreborn.streamflix.ui.FocusEffect
 import com.streamflixreborn.streamflix.adapters.AppAdapter
 import com.streamflixreborn.streamflix.database.AppDatabase
 import com.streamflixreborn.streamflix.databinding.*
@@ -233,10 +233,8 @@ class TvShowViewHolder(
                 ShowOptionsTvDialog(context, tvShow).show()
                 true
             }
-            setOnFocusChangeListener { _, hasFocus ->
-                val animation = if (hasFocus) AnimationUtils.loadAnimation(context, R.anim.zoom_in) else AnimationUtils.loadAnimation(context, R.anim.zoom_out)
-                startAnimation(animation)
-                animation.fillAfter = true
+            setOnFocusChangeListener { view, hasFocus ->
+                FocusEffect.animate(view, hasFocus)
                 (context.toActivity()?.getCurrentFragment() as? HomeTvFragment)?.let { fragment ->
                     if (hasFocus) {
                         fragment.pinBackground(tvShow.banner)
@@ -311,10 +309,8 @@ class TvShowViewHolder(
                 ShowOptionsTvDialog(context, tvShow).show()
                 true
             }
-            setOnFocusChangeListener { _, hasFocus ->
-                val animation = if (hasFocus) AnimationUtils.loadAnimation(context, R.anim.zoom_in) else AnimationUtils.loadAnimation(context, R.anim.zoom_out)
-                startAnimation(animation)
-                animation.fillAfter = true
+            setOnFocusChangeListener { view, hasFocus ->
+                FocusEffect.animate(view, hasFocus)
             }
         }
         setPoster(binding.ivTvShowPoster)

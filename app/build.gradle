@@ -30,8 +30,8 @@ android {
         applicationId "com.streamflixreborn.streamflix"
         minSdk 21
         targetSdk 35
-        versionCode 145
-        versionName "1.7.116"
+        versionCode 146
+        versionName "1.0.0"
 
         buildConfigField "String", "APP_LAYOUT", "\"${properties.getProperty("APP_LAYOUT")}\""
         buildConfigField "String", "TMDB_API_KEY", "\"${properties.getProperty("TMDB_API_KEY")}\""
@@ -60,6 +60,21 @@ android {
         jvmTarget = '17'
     }
 
+    // Keystore para CI: si existe `ci-signing/release.keystore` (lo genera el
+    // workflow con keytool) el APK de release queda firmado e instalable sin
+    // necesitar secretos. Si hay un keystore propio en esa ruta, se usa ese.
+    def ciKeystore = rootProject.file("ci-signing/release.keystore")
+    signingConfigs {
+        if (ciKeystore.exists()) {
+            ciRelease {
+                storeFile ciKeystore
+                storePassword System.getenv("CI_KEYSTORE_PASSWORD") ?: "streamflix"
+                keyAlias System.getenv("CI_KEY_ALIAS") ?: "streamflix"
+                keyPassword System.getenv("CI_KEY_PASSWORD") ?: "streamflix"
+            }
+        }
+    }
+
     buildTypes {
         debug {
             minifyEnabled false
@@ -69,6 +84,9 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (ciKeystore.exists()) {
+                signingConfig signingConfigs.ciRelease
+            }
         }
     }
 
@@ -129,7 +147,10 @@ dependencies {
     implementation "org.nanohttpd:nanohttpd:2.3.1"
     implementation "com.google.zxing:core:3.5.1"
     implementation("org.java-websocket:Java-WebSocket:1.5.3")
-    
+
+    // Unit tests de los scrapers (no requieren dispositivo)
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0'
 }
 
 ksp {

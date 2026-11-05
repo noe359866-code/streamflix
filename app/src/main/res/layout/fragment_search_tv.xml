@@ -105,7 +105,7 @@
             android:layout_weight="1"
             android:text="@string/global_search"
             android:textColor="@android:color/white"
-            android:textSize="18sp" />
+            appearance="TextAppearance.App.Headline" />
 
         <ImageView
             android:id="@+id/iv_global_search_switch"

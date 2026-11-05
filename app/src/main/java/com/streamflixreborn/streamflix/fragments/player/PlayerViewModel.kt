@@ -5,7 +5,10 @@ import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.MimeTypes
+import com.streamflixreborn.streamflix.extractors.Extractor
 import com.streamflixreborn.streamflix.models.Video
+import com.streamflixreborn.streamflix.providers.Provider
 import com.streamflixreborn.streamflix.utils.CustomTabHelper
 import com.streamflixreborn.streamflix.utils.EpisodeManager
 import com.streamflixreborn.streamflix.utils.OpenSubtitles
@@ -100,8 +103,17 @@ class PlayerViewModel(
         lastId = id
         _state.emit(State.LoadingServers)
         try {
-            val servers = UserPreferences.currentProvider!!.getServers(id, videoType)
-            if (servers.isEmpty()) throw Exception("No servers found")
+            // Sólo streams: se descartan soporte/donaciones, redes sociales,
+            // trailers y duplicados antes de mostrar la lista al usuario.
+            val rawServers = Provider.playableServers(
+                UserPreferences.currentProvider!!.getServers(id, videoType)
+            )
+            if (rawServers.isEmpty()) throw Exception("No servers found")
+
+            // El usuario no elige stream: se ordena la lista de mejor a peor y el
+            // player reproduce la primera. El orden es también la cadena de
+            // reintentos cuando un host falla (ver [StreamAutoSelector]).
+            val servers = StreamAutoSelector.order(rawServers, UserPreferences.lastGoodServerHost)
             
             // LOG POTENZIATO: Mostra tutti i server disponibili per il player
             Log.i("StreamFlixES", "[SERVERS LIST] -> Provider: ${UserPreferences.currentProvider!!.name}")
@@ -121,6 +133,14 @@ class PlayerViewModel(
         try {
             val video = UserPreferences.currentProvider!!.getVideo(server)
             if (video.source.isEmpty()) throw Exception("No source found")
+
+            // La app sólo reproduce HLS (.m3u8) y MP4. Si el extractor devolvió otra
+            // cosa (DASH, MKV, un HTML de error…) se falla aquí con un mensaje claro
+            // en lugar de mandar al player una fuente que nunca va a arrancar.
+            val mediaType = Extractor.formatOf(video.source) ?: video.type
+            if (mediaType != MimeTypes.APPLICATION_M3U8 && mediaType != MimeTypes.VIDEO_MP4) {
+                throw Exception("Formato no soportado (sólo HLS o MP4): ${video.source}")
+            }
 
             // LOGICA SOTTOTITOLI GLOBALE: 
             // Se il provider non ha già impostato un default (es. i "forced" in spagnolo),

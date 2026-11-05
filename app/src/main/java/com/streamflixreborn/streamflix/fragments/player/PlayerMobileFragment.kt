@@ -269,14 +269,17 @@ class PlayerMobileFragment : Fragment() {
         initializePlayer(false)
         initializeVideo()
         gestureHelper = PlayerGestureHelper(
-            requireContext(), 
-            binding.pvPlayer, 
-            binding.llBrightness, 
-            binding.pbBrightness, 
+            requireContext(),
+            binding.pvPlayer,
+            binding.llBrightness,
+            binding.pbBrightness,
             binding.tvBrightnessPercentage,
-            binding.llVolume, 
-            binding.pbVolume, 
-            binding.tvVolumePercentage
+            binding.llVolume,
+            binding.pbVolume,
+            binding.tvVolumePercentage,
+            binding.llSeek,
+            binding.tvSeekDelta,
+            binding.ivSeekIcon,
         )
 
         // Stato Video
@@ -371,6 +374,8 @@ class PlayerMobileFragment : Fragment() {
                     }
 
                     is PlayerViewModel.State.FailedLoadingVideo -> {
+                        // El host falló: el reintento lo deja al final de la lista.
+                        StreamAutoSelector.markFailed(state.server)
                         val nextServer = servers.getOrNull(servers.indexOf(state.server) + 1)
                         if (nextServer != null) {
                             viewModel.getVideo(nextServer)
@@ -725,7 +730,10 @@ class PlayerMobileFragment : Fragment() {
         }
 
         binding.pvPlayer.controller.binding.btnSkipIntro.setOnClickListener {
-            player.seekTo(player.currentPosition + 85000)
+            // Antes: seekTo(currentPosition + 85 s) siempre, que en series con
+            // intro de 30 s o de 2 min cortaba contenido o dejaba 55 s de intro.
+            // Ver [SkipIntroResolver].
+            player.seekTo(SkipIntroResolver.targetPosition(player))
             it.isGone = true
         }
 
@@ -901,9 +909,45 @@ class PlayerMobileFragment : Fragment() {
     }
 
 
+
+    // region auto-selección de stream
+
+    /**
+     * Se llama cuando el media ya elegido no reproduce (403, host caído, m3u8
+     * roto). En vez de dejar al usuario en una pantalla negra o mandarlo a
+     * Ajustes → Servidores, se toma el siguiente de la lista ordenada por
+     * [StreamAutoSelector] y se reintenta solo.
+     */
+    private fun tryNextServerOnPlaybackFailure() {
+        val failed = currentServer ?: return
+        val currentIndex = servers.indexOfFirst { it.id == failed.id }
+        if (currentIndex < 0) return
+
+        StreamAutoSelector.markFailed(failed)
+
+        // El usuario puede haber elegido un servidor a mano: sólo se encadena un
+        // fallo por servidor para no entrar en un bucle de reintentos.
+        if (failed.id in autoFallbackTried) return
+        autoFallbackTried += failed.id
+
+        val next = servers.getOrNull(currentIndex + 1)
+        if (next != null) {
+            Log.i("Player", "Fallo al reproducir ${failed.name}; probando ${next.name}")
+            viewModel.getVideo(next)
+        }
+    }
+
+    private val autoFallbackTried = mutableSetOf<String>()
+
+    // endregion
+
     private fun displayVideo(video: Video, server: Video.Server) {
         currentVideo = video
         currentServer = server
+        // Memoria de qué host funciona: la próxima vez se intenta primero
+        // (ver [StreamAutoSelector]).
+        StreamAutoSelector.markWorked(server)
+        UserPreferences.lastGoodServerHost = StreamAutoSelector.hostKey(server)
         updatePlayerHeader()
 
         val extraBuffering = PlayerSettingsView.Settings.ExtraBuffering.isEnabled
@@ -1117,6 +1161,7 @@ class PlayerMobileFragment : Fragment() {
             override fun onPlayerError(error: PlaybackException) {
                 super.onPlayerError(error)
                 Log.e("PlayerMobileFragment", "onPlayerError: ", error)
+                tryNextServerOnPlaybackFailure()
             }
         })
 

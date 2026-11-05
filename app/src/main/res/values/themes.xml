@@ -4,6 +4,16 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="app_background_color">#181818</item>
+        <item name="android:windowBackground">?attr/app_background_color</item>
+        <item name="colorAccent">#FFFFFF</item>
+        <item name="android:textColorPrimary">#F5F5F7</item>
+        <item name="android:textColorSecondary">#A1A1A6</item>
+        <item name="android:fontFamily">@font/inter_regular</item>
+        <item name="fontFamily">@font/inter_regular</item>
+        <item name="android:colorBackground">?attr/app_background_color</item>
+        <item name="surface_color">#1C1C1E</item>
+        <item name="surface_color_elevated">#2C2C2E</item>
+        <item name="focus_ring_color">#FFFFFF</item>
         <item name="home_gradient_drawable">@drawable/bg_home_gradient_default</item>
         <item name="movie_banner_gradient_drawable">@drawable/bg_movie_banner_gradient_default</item>
         <item name="tv_show_banner_gradient_drawable">@drawable/bg_tv_show_banner_gradient_default</item>
@@ -136,6 +146,15 @@
     <!-- Tema di Default per TV -->
     <style name="AppTheme.Tv" parent="Theme.Leanback">
         <item name="app_background_color">#181818</item>
+        <item name="colorAccent">#FFFFFF</item>
+        <item name="android:textColorPrimary">#F5F5F7</item>
+        <item name="android:textColorSecondary">#A1A1A6</item>
+        <item name="android:fontFamily">@font/inter_regular</item>
+        <item name="fontFamily">@font/inter_regular</item>
+        <item name="android:colorBackground">?attr/app_background_color</item>
+        <item name="surface_color">#1C1C1E</item>
+        <item name="surface_color_elevated">#2C2C2E</item>
+        <item name="focus_ring_color">#FFFFFF</item>
         <item name="preferenceTheme">@style/PreferenceThemeOverlayLeanback</item>
         <item name="alertDialogTheme">@style/Theme.AppCompat.Dialog.Alert</item>
         <item name="colorAccent">#FFFFFF</item>

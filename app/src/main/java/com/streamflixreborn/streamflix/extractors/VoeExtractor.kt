@@ -17,7 +17,30 @@ class VoeExtractor : Extractor() {
 
     override val name = "VOE"
     override val mainUrl = "https://voe.sx/"
-    override val aliasUrls = listOf("https://jilliandescribecompany.com", "https://mikaylaarealike.com","https://christopheruntilpoint.com","https://walterprettytheir.com","https://crystaltreatmenteast.com","https://lauradaydo.com","https://lancewhosedifficult.com", "https://dianaavoidthey.com", "https://jefferycontrolmodel.com", "https://charlestoughrace.com")
+    /**
+     * VOE rota de dominio constantemente. Estos alias se mantienen al día con la
+     * lista de upstream; si aparece uno nuevo basta añadirlo aquí (el extractor
+     * deduce el host real desde el enlace, así que el alias sólo sirve para el
+     * enrutado previo en [Extractor]).
+     */
+    override val aliasUrls = listOf(
+        "https://jilliandescribecompany.com",
+        "https://mikaylaarealike.com",
+        "https://christopheruntilpoint.com",
+        "https://walterprettytheir.com",
+        "https://crystaltreatmenteast.com",
+        "https://lauradaydo.com",
+        "https://lancewhosedifficult.com",
+        "https://dianaavoidthey.com",
+        "https://jefferycontrolmodel.com",
+        "https://charlestoughrace.com",
+        "https://richardquestionbuilding.com",
+        "https://jessicayeahcatch.com",
+        "https://juliewomanwish.com",
+        "https://rebeccapracticeloss.com",
+        "https://johnbeyondnation.com",
+        "https://jamesbornmain.com",
+    )
 
 
     override suspend fun extract(link: String): Video {

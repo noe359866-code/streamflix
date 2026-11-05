@@ -5,6 +5,7 @@ import com.tanasi.retrofit_jsoup.converter.JsoupConverterFactory
 import com.streamflixreborn.streamflix.adapters.AppAdapter
 import com.streamflixreborn.streamflix.extractors.Extractor
 import com.streamflixreborn.streamflix.models.*
+import com.streamflixreborn.streamflix.scrapers.await
 import com.streamflixreborn.streamflix.utils.DnsResolver
 import com.streamflixreborn.streamflix.utils.TMDb3
 import com.streamflixreborn.streamflix.utils.TMDb3.original
@@ -896,9 +897,9 @@ object CuevanaEuProvider : Provider {
                 .header("X-WP-Nonce", nonce)
                 .build()
 
-            val responseBody = withContext(Dispatchers.IO) {
-                client.newCall(request).execute().use { it.body?.string() }
-            } ?: return emptyList()
+            val responseBody = client.await(request).use { it.body?.string() }
+                ?.takeIf { it.isNotBlank() }
+                ?: return emptyList()
 
             val responseJson = json.decodeFromString<CuevanaEpisodesResponse>(responseBody)
             return responseJson.episodes.map { cuevanaEpisode ->
@@ -1009,7 +1010,14 @@ object CuevanaEuProvider : Provider {
         }.distinctBy { it.id }
     }
 
-    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> {
+    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> =
+        Provider.playableServers(getServersRaw(id, videoType))
+
+    /**
+     * Servidores tal cual los entrega la web. `getServers` filtra después para que
+     * sólo salgan reproductores reales (ver [Provider.playableServers]).
+     */
+    private suspend fun getServersRaw(id: String, videoType: Video.Type): List<Video.Server> {
         return try {
             val postId = when (videoType) {
                 is Video.Type.Movie -> getFastApi<FastApiSinglePost>(
@@ -1094,9 +1102,9 @@ object CuevanaEuProvider : Provider {
                 .post(formBodyBuilder.build())
                 .build()
 
-            val responseBody = withContext(Dispatchers.IO) {
-                client.newCall(request).execute().use { it.body?.string() }
-            } ?: return null
+            val responseBody = client.await(request).use { it.body?.string() }
+                ?.takeIf { it.isNotBlank() }
+                ?: return null
 
             Log.d(TAG, "fetchRyusakiStreamUrl response: $responseBody")
             val streamJson = json.decodeFromString<RyusakiStreamResponse>(responseBody)
@@ -1111,9 +1119,9 @@ object CuevanaEuProvider : Provider {
         var finalUrl = server.id
         if (finalUrl.contains("/player.php?")) {
             try {
-                val html = withContext(Dispatchers.IO) {
-                    client.newCall(Request.Builder().url(finalUrl).build()).execute().use { it.body?.string() }
-                } ?: ""
+                val html = client.await(Request.Builder().url(finalUrl).build())
+                    .use { it.body?.string() }
+                    .orEmpty()
                 val iframeUrl = Regex("""<iframe[^>]+src="([^"]+)"""", RegexOption.IGNORE_CASE)
                     .find(html)
                     ?.groupValues
@@ -1127,9 +1135,9 @@ object CuevanaEuProvider : Provider {
         }
         if (finalUrl.contains("app.mysync.mov/stream/")) {
             try {
-                val html = withContext(Dispatchers.IO) {
-                    client.newCall(Request.Builder().url(finalUrl).build()).execute().use { it.body?.string() }
-                } ?: ""
+                val html = client.await(Request.Builder().url(finalUrl).build())
+                    .use { it.body?.string() }
+                    .orEmpty()
                 val redirectUrl = html.substringAfter("window.location.replace(\"", "").substringBefore("\"")
                 if (redirectUrl.isNotEmpty()) {
                     finalUrl = redirectUrl
@@ -1192,13 +1200,10 @@ object CuevanaEuProvider : Provider {
                 }
                 .build()
 
-            val body = withContext(Dispatchers.IO) {
-                client.newCall(
-                    Request.Builder()
-                        .url(url)
-                        .build()
-                ).execute().use { it.body?.string() }
-            } ?: return null
+            val body = client.await(Request.Builder().url(url).build())
+                .use { it.body?.string() }
+                ?.takeIf { it.isNotBlank() }
+                ?: return null
 
             json.decodeFromString<FastApiEnvelope<T>>(body).data
         } catch (e: Exception) {

@@ -200,7 +200,14 @@ object FlixLatamProvider : Provider {
         }
     }
 
-    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> {
+    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> =
+        Provider.playableServers(getServersRaw(id, videoType))
+
+    /**
+     * Servidores tal cual los entrega la web. `getServers` filtra después para que
+     * sólo salgan reproductores reales (ver [Provider.playableServers]).
+     */
+    private suspend fun getServersRaw(id: String, videoType: Video.Type): List<Video.Server> {
         val servers = mutableListOf<Video.Server>()
         try {
             val url = "$baseUrl/$id/"
@@ -215,7 +222,7 @@ object FlixLatamProvider : Provider {
         } catch (e: Exception) {
             Log.e("FlixLatamProvider", "Error en getServers: ${e.message}", e)
         }
-        return servers.distinctBy { it.id }
+        return Provider.playableServers(servers.distinctBy { it.id })
     }
 
     private suspend fun processIframe(embedUrl: String): List<Video.Server> {

@@ -2,13 +2,21 @@ package com.streamflixreborn.streamflix.utils
 
 import androidx.media3.common.MimeTypes
 import com.streamflixreborn.streamflix.models.Video
+import com.streamflixreborn.streamflix.scrapers.await
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
 class PlaylistUtils(private val client: OkHttpClient) {
 
-    fun extractFromHls(
+    /**
+     * Descarga la playlist maestra y devuelve una pista por calidad.
+     *
+     * Antes la respuesta no se cerraba (fuga de sockets) y el parseo se rompía con
+     * playlists que separan `#EXT-X-STREAM-INF` y la URI con líneas en blanco o
+     * comentarios (habitual en los HLS de estos sitios).
+     */
+    suspend fun extractFromHls(
         playlistUrl: String,
         referer: String? = null,
     ): List<Video> {
@@ -17,23 +25,22 @@ class PlaylistUtils(private val client: OkHttpClient) {
             if (referer != null) {
                 request.header("Referer", referer)
             }
-            client.newCall(request.build()).execute().body?.string() ?: ""
+            client.await(request.build()).use { it.body?.string().orEmpty() }
         } catch (e: Exception) {
             // Si la URL principal ya es un video, devuélvelo directamente
             return listOf(Video(source = playlistUrl, subtitles = emptyList(), type = MimeTypes.APPLICATION_M3U8))
         }
 
-        val videoList = mutableListOf<Video>()
+        val videoList = mutableListOf<Pair<Int, Video>>()
 
         if (!masterPlaylist.contains("#EXT-X-STREAM-INF")) {
-            videoList.add(
+            return listOf(
                 Video(
                     source = playlistUrl,
                     subtitles = emptyList(),
                     type = MimeTypes.APPLICATION_M3U8
                 )
             )
-            return videoList
         }
 
         val masterUrl = playlistUrl.toHttpUrl()
@@ -48,14 +55,21 @@ class PlaylistUtils(private val client: OkHttpClient) {
             )
         }.toList()
 
-        masterPlaylist.substringAfter("#EXT-X-STREAM-INF:").split("#EXT-X-STREAM-INF:").forEach {
-            val resolution = RESOLUTION_REGEX.find(it)?.groupValues?.get(1)
-            val quality = resolution?.let { res -> "${res}p" } ?: getQualityFromBandwidth(it)
-            val url = getAbsoluteUrl(it.substringAfter("\n").trim(), masterUrl.toString(), masterBaseUrl)
+        masterPlaylist.split("#EXT-X-STREAM-INF:").drop(1).forEach { block ->
+            val resolution = RESOLUTION_REGEX.find(block)?.groupValues?.get(1)
+            val quality = resolution?.let { res -> "${res}p" } ?: getQualityFromBandwidth(block)
+            // Primera línea útil (URI) del bloque, ignorando atributos y comentarios.
+            val variant = block.lineSequence()
+                .drop(1)
+                .map { it.trim() }
+                .firstOrNull { it.isNotEmpty() && !it.startsWith("#") }
+                ?: return@forEach
+            val url = getAbsoluteUrl(variant, masterUrl.toString(), masterBaseUrl)
             val videoHeaders = referer?.let { mapOf("Referer" to it) }
 
+            val height = resolution?.toIntOrNull() ?: 0
             videoList.add(
-                Video(
+                height to Video(
                     source = url,
                     subtitles = subtitles,
                     type = MimeTypes.APPLICATION_M3U8,
@@ -63,7 +77,12 @@ class PlaylistUtils(private val client: OkHttpClient) {
                 )
             )
         }
-        return videoList.sortedByDescending { it.source.contains("1080") }
+        // Orden real por resolución (antes solo miraba si la URL contenía "1080")
+        // y sin duplicados por URL: algunos master list repiten la misma variante.
+        return videoList
+            .sortedByDescending { (height, _) -> height }
+            .distinctBy { (_, video) -> video.source }
+            .map { (_, video) -> video }
     }
 
     private fun getAbsoluteUrl(url: String, playlistUrl: String, masterBase: String): String {

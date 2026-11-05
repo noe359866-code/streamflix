@@ -3,6 +3,7 @@ package com.streamflixreborn.streamflix.extractors
 import androidx.media3.common.MimeTypes
 import com.tanasi.retrofit_jsoup.converter.JsoupConverterFactory
 import com.streamflixreborn.streamflix.models.Video
+import com.streamflixreborn.streamflix.scrapers.await
 import com.streamflixreborn.streamflix.utils.JsUnpacker
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -35,15 +36,13 @@ open class LoadXExtractor: Extractor() {
             .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:139.0) Gecko/20100101 Firefox/139.0")
             .build()
 
-        val getResponse = client.newCall(getRequest).execute()
-        val setCookieHeaders = getResponse.headers("Set-Cookie")
+        // `await` evita bloquear el hilo de la corrutina y cierra la respuesta.
+        val setCookieHeaders = client.await(getRequest).use { it.headers("Set-Cookie") }
 
         val firePlayerCookie = setCookieHeaders
             .firstOrNull { it.startsWith("fireplayer_player=") }
             ?.split(";")?.get(0)
             ?: throw Exception("fireplayer_player cookie not found")
-
-        getResponse.close()
         val service = Service.build(mainUrl)
 
         val responseBody = service.postVideoData(

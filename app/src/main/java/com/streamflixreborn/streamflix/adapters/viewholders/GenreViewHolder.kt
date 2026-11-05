@@ -2,11 +2,11 @@ package com.streamflixreborn.streamflix.adapters.viewholders
 
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.view.animation.AnimationUtils
 import androidx.navigation.findNavController
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewbinding.ViewBinding
 import com.streamflixreborn.streamflix.R
+import com.streamflixreborn.streamflix.ui.FocusEffect
 import com.streamflixreborn.streamflix.databinding.ItemGenreGridMobileBinding
 import com.streamflixreborn.streamflix.databinding.ItemGenreGridTvBinding
 import com.streamflixreborn.streamflix.models.Genre
@@ -60,13 +60,8 @@ class GenreViewHolder(
                 }
                 findNavController().navigate(R.id.genre, args)
             }
-            setOnFocusChangeListener { _, hasFocus ->
-                val animation = when {
-                    hasFocus -> AnimationUtils.loadAnimation(context, R.anim.zoom_in)
-                    else -> AnimationUtils.loadAnimation(context, R.anim.zoom_out)
-                }
-                binding.root.startAnimation(animation)
-                animation.fillAfter = true
+            setOnFocusChangeListener { view, hasFocus ->
+                FocusEffect.animate(view, hasFocus)
             }
         }
 

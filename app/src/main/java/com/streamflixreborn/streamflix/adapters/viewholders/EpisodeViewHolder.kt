@@ -1,7 +1,6 @@
 package com.streamflixreborn.streamflix.adapters.viewholders
 
 import android.view.View
-import android.view.animation.AnimationUtils
 import android.widget.ImageView
 import androidx.navigation.findNavController
 import androidx.recyclerview.widget.RecyclerView
@@ -9,6 +8,7 @@ import androidx.viewbinding.ViewBinding
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.streamflixreborn.streamflix.R
+import com.streamflixreborn.streamflix.ui.FocusEffect
 import com.streamflixreborn.streamflix.databinding.ItemEpisodeContinueWatchingMobileBinding
 import com.streamflixreborn.streamflix.databinding.ItemEpisodeContinueWatchingTvBinding
 import com.streamflixreborn.streamflix.databinding.ItemEpisodeMobileBinding
@@ -203,13 +203,8 @@ class EpisodeViewHolder(
                     .show()
                 true
             }
-            setOnFocusChangeListener { _, hasFocus ->
-                val animation = when {
-                    hasFocus -> AnimationUtils.loadAnimation(context, R.anim.zoom_in)
-                    else -> AnimationUtils.loadAnimation(context, R.anim.zoom_out)
-                }
-                binding.root.startAnimation(animation)
-                animation.fillAfter = true
+            setOnFocusChangeListener { view, hasFocus ->
+                FocusEffect.animate(view, hasFocus)
             }
         }
 
@@ -419,13 +414,8 @@ class EpisodeViewHolder(
                     .show()
                 true
             }
-            setOnFocusChangeListener { _, hasFocus ->
-                val animation = when {
-                    hasFocus -> AnimationUtils.loadAnimation(context, R.anim.zoom_in)
-                    else -> AnimationUtils.loadAnimation(context, R.anim.zoom_out)
-                }
-                binding.root.startAnimation(animation)
-                animation.fillAfter = true
+            setOnFocusChangeListener { view, hasFocus ->
+                FocusEffect.animate(view, hasFocus)
 
                 when (val fragment = context.toActivity()?.getCurrentFragment()) {
                     is HomeTvFragment -> {

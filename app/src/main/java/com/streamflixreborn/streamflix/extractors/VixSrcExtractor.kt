@@ -7,6 +7,7 @@ import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import com.tanasi.retrofit_jsoup.converter.JsoupConverterFactory
 import com.streamflixreborn.streamflix.models.Video
+import com.streamflixreborn.streamflix.scrapers.await
 import com.streamflixreborn.streamflix.utils.DnsResolver
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
@@ -127,7 +128,7 @@ class VixSrcExtractor : Extractor() {
             finalHeaders.forEach { (k, v) -> headersBuilder.add(k, v) }
             val request = Request.Builder().url(finalUrl).headers(headersBuilder.build()).build()
             
-            client.newCall(request).execute().use { response ->
+            client.await(request).use { response ->
                 if (response.isSuccessful && response.body != null) {
                     var playlistContent = response.body!!.string()
                     val langCode = providerLang

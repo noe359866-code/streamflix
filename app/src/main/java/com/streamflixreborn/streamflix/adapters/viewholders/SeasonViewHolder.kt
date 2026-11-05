@@ -1,12 +1,12 @@
 package com.streamflixreborn.streamflix.adapters.viewholders
 
-import android.view.animation.AnimationUtils
 import androidx.navigation.findNavController
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewbinding.ViewBinding
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.streamflixreborn.streamflix.R
+import com.streamflixreborn.streamflix.ui.FocusEffect
 import com.streamflixreborn.streamflix.databinding.ItemSeasonMobileBinding
 import com.streamflixreborn.streamflix.databinding.ItemSeasonTvBinding
 import com.streamflixreborn.streamflix.fragments.tv_show.TvShowMobileFragmentDirections
@@ -82,12 +82,8 @@ class SeasonViewHolder(
                 )
             }
             setOnFocusChangeListener { _, hasFocus ->
-                val animation = when {
-                    hasFocus -> AnimationUtils.loadAnimation(context, R.anim.zoom_in)
-                    else -> AnimationUtils.loadAnimation(context, R.anim.zoom_out)
-                }
-                binding.ivSeasonPoster.startAnimation(animation)
-                animation.fillAfter = true
+                // El texto no se escala: sólo el póster, como las celdas de tvOS.
+                FocusEffect.animate(binding.ivSeasonPoster, hasFocus)
             }
         }
 

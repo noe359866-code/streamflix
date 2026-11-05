@@ -4,6 +4,14 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión a publicar (ej. 1.0.0). Si se deja vacío se usa la del tag.'
+        required: false
+
+permissions:
+  contents: write
 
 jobs:
   build-and-release:
@@ -11,114 +19,114 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
 
-      - name: Setup JDK environment
-        uses: actions/setup-java@v1
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
         with:
+          distribution: temurin
           java-version: 17
 
-      - name: Access Secrets
+      # Los runners de GitHub traen el Android SDK preinstalado (ANDROID_HOME).
+      # No se instala nada extra para evitar fallos de red del instalador.
+      - name: Check Android SDK
+        run: |
+          echo "ANDROID_HOME=${ANDROID_HOME}"
+          ls "${ANDROID_HOME}/platforms" || true
+          ls "${ANDROID_HOME}/build-tools" || true
+
+      - name: Accept Android licenses
+        run: yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+
+      - name: Version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publicando versión $VERSION"
+
+      - name: local.properties
         env:
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
           RABBITSTREAM_SOURCE_API: ${{ secrets.RABBITSTREAM_SOURCE_API }}
+          SUBDL_API_KEY: ${{ secrets.SUBDL_API_KEY }}
         run: |
-          echo TMDB_API_KEY=$TMDB_API_KEY >> local.properties
-          echo RABBITSTREAM_SOURCE_API=$RABBITSTREAM_SOURCE_API >> local.properties
+          {
+            echo "TMDB_API_KEY=${TMDB_API_KEY}"
+            echo "RABBITSTREAM_SOURCE_API=${RABBITSTREAM_SOURCE_API}"
+            echo "SUBDL_API_KEY=${SUBDL_API_KEY}"
+          } > local.properties
 
-      - name: Make Gradle executable
+      # Keystore efímero para que el APK quede firmado e instalable aunque el
+      # repositorio no tenga secretos de firma configurados.
+      - name: Generate signing key
+        run: |
+          mkdir -p ci-signing
+          keytool -genkeypair -v \
+            -keystore ci-signing/release.keystore \
+            -storepass streamflix -keypass streamflix \
+            -alias streamflix -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=StreamFlix, OU=Arena, O=StreamFlix, L=Managua, C=NI"
+
+      - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Build APK
-        run: ./gradlew assembleRelease --stacktrace
-
-      - name: Sign APK
-        id: sign_apk
-        uses: r0adkll/sign-android-release@v1
-        with:
-          releaseDirectory: app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.KEYSTORE }}
-          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: "34.0.0"
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-
-      - name: Upload Release APK
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.sign_apk.outputs.signedReleaseFile }}
-          asset_name: ${{ github.event.repository.name }}-${{ github.ref_name }}.apk
-          asset_content_type: application/zip
-
-
-      - name: Set Mobile version
+      # Android TV: layout tv (el manifest de TV exige leanback).
+      - name: Build APK (TV)
         run: |
-          echo APP_LAYOUT=mobile >> local.properties
+          set -o pipefail
+          echo "APP_LAYOUT=tv" >> local.properties
+          ./gradlew :app:assembleRelease --stacktrace --no-daemon 2>&1 | tee build-tv.log
 
-      - name: Build APK
-        run: ./gradlew assembleRelease --stacktrace
-
-      - name: Sign APK
-        id: sign_apk_mobile
-        uses: r0adkll/sign-android-release@v1
-        with:
-          releaseDirectory: app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.KEYSTORE }}
-          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: "34.0.0"
-
-      - name: Upload Release APK
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.sign_apk_mobile.outputs.signedReleaseFile }}
-          asset_name: ${{ github.event.repository.name }}-${{ github.ref_name }}-only-mobile.apk
-          asset_content_type: application/zip
-
-
-      - name: Set TV version
+      - name: Collect APK (TV)
         run: |
-          echo APP_LAYOUT=tv >> local.properties
+          mkdir -p out
+          cp app/build/outputs/apk/release/app-release.apk \
+             "out/streamflix-${{ steps.version.outputs.value }}-tv.apk"
 
-      - name: Build APK
-        run: ./gradlew assembleRelease --stacktrace
+      # Celular: mismo binario con layout mobile forzado.
+      - name: Build APK (Mobile)
+        run: |
+          set -o pipefail
+          sed -i '/^APP_LAYOUT=/d' local.properties
+          echo "APP_LAYOUT=mobile" >> local.properties
+          ./gradlew :app:assembleRelease --stacktrace --no-daemon 2>&1 | tee build-mobile.log
 
-      - name: Sign APK
-        id: sign_apk_tv
-        uses: r0adkll/sign-android-release@v1
+      - name: Collect APK (Mobile)
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk \
+             "out/streamflix-${{ steps.version.outputs.value }}-mobile.apk"
+          ls -lh out
+
+      # Log completo de Gradle: se sube siempre para poder diagnosticar
+      # fallos de compilación desde fuera del runner.
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          releaseDirectory: app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.KEYSTORE }}
-          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: "34.0.0"
+          name: gradle-logs
+          path: |
+            build-tv.log
+            build-mobile.log
+          if-no-files-found: ignore
 
-      - name: Upload Release APK
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.sign_apk_tv.outputs.signedReleaseFile }}
-          asset_name: ${{ github.event.repository.name }}-${{ github.ref_name }}-only-tv.apk
-          asset_content_type: application/zip
+          name: streamflix-${{ steps.version.outputs.value }}
+          path: out/*.apk
+          if-no-files-found: error
+
+      - name: Create release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "StreamFlix ${{ steps.version.outputs.value }}" \
+            --notes "APK de StreamFlix ${{ steps.version.outputs.value }} (Android TV y celular)." \
+            out/*.apk

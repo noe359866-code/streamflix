@@ -1,7 +1,9 @@
 package com.streamflixreborn.streamflix.extractors
 
 import android.util.Log
+import androidx.media3.common.MimeTypes
 import com.streamflixreborn.streamflix.models.Video
+import com.streamflixreborn.streamflix.scrapers.HttpScraper
 
 abstract class Extractor {
 
@@ -13,7 +15,11 @@ abstract class Extractor {
     // THIS is the main method all subclasses must implement
     abstract suspend fun extract(link: String): Video
 
-    // THIS is a convenience helper
+    /**
+     * Punto de entrada que usan los providers. Por defecto delega en [extract],
+     * pero los extractores pueden sobrescribirlo para aprovechar el [server]
+     * (nombre visible, subtítulos o headers asociados al servidor elegido).
+     */
     open suspend fun extract(link: String, server: Video.Server? = null): Video {
         return extract(link)
     }
@@ -111,114 +117,176 @@ abstract class Extractor {
             ZillaExtractor(),
             PDrainExtractor(),
             MaxstreamExtractor(),
+            // --- Portados de upstream main (resolvedores de hosts concretos) ---
+            VidemExtractor(),
+            VidloveExtractor(),
+            VideoappExtractor(),
+            HexloadExtractor(),
+            TurbovidExtractor(),
+            DeltaBitExtractor(),
+            FastreamExtractor(),
+            // --- Español / latino ---
+            // Los extractores genéricos van al final: se usan como último recurso
+            // cuando ningún extractor específico coincide con el host.
+            FirestreamExtractor(),
+            JKPlayerExtractor(),
+            MovieMasterExtractor(),
+            EsprinahyExtractor(),
+            StreamSBExtractor(),
+            Mp4UploadExtractor(),
+            NinjaStreamExtractor(),
+            UchExtractor(),
         )
 
+        private const val TAG = "Extractor"
+
+        /**
+         * Resolución de "bridge" universal (StreamHG/Sync/Cuevana).
+         *
+         * Antes esta lógica era una petición bloqueante sin timeout ni reintentos.
+         * Ahora usa [HttpScraper], así que corre en IO, cierra la respuesta y
+         * entiende tanto `window.location.replace` como `href`, `<iframe src>`
+         * o meta-refresh.
+         */
+        private suspend fun resolveBridge(link: String): String? {
+            val html = HttpScraper.getText(link, attempts = 1) ?: return null
+            val candidates = listOf(
+                html.substringAfter("window.location.replace(\"", "").substringBefore("\""),
+                html.substringAfter("window.location.href = \"", "").substringBefore("\""),
+                html.substringAfter("location.href=\"", "").substringBefore("\""),
+                html.substringAfter("src=\"", "").substringBefore("\""),
+                Regex("""(?i)<meta[^>]+url=([\"'])?""").find(html)?.groupValues?.get(1).orEmpty(),
+            )
+            return candidates.firstOrNull { it.startsWith("http") }
+        }
+
+        /** Normaliza un host para comparar: sin esquema, sin `www.`, sin ruta, en minúsculas. */
+        private fun hostOf(value: String): String = value
+            .lowercase()
+            .removePrefix("https://")
+            .removePrefix("http://")
+            .substringBefore('/')
+            .removePrefix("www.")
+
+        /** Registro del extractor, con su host normalizado ya precalculado. */
+        private class Registration(
+            val extractor: Extractor,
+            val hosts: List<String>,
+            val rootDomains: List<String>,
+        )
+
+        private val registrations: List<Registration> by lazy {
+            extractors.map { extractor ->
+                val all = buildList {
+                    add(extractor.mainUrl)
+                    addAll(extractor.aliasUrls)
+                }.filter { it.isNotBlank() }
+                Registration(
+                    extractor = extractor,
+                    hosts = all.map(::hostOf).filter { it.isNotBlank() },
+                    // `filemoon.site` -> `filemoon` para tolerar dominios rotatorios
+                    rootDomains = all.map { host -> hostOf(host).substringBefore('.') }
+                        .filter { it.length > 3 },
+                )
+            }
+        }
+
+        /**
+         * Tipo MIME si el enlace es un archivo directo **HLS o MP4**.
+         *
+         * La app sólo entrega estos dos formatos: cualquier otra cosa (MPD/DASH,
+         * MKV, WEBM, FLV…) no se considera un stream válido y el extractor
+         * intentará resolverla como player empaquetado.
+         */
+        private fun directMediaType(link: String): String? = formatOf(link)
+
+        /** `MimeTypes.APPLICATION_M3U8` para HLS, `MimeTypes.VIDEO_MP4` para MP4, `null` si no es ninguno. */
+        internal fun formatOf(link: String): String? {
+            val path = link.substringBefore('?').substringBefore('#').lowercase()
+            return when {
+                path.endsWith(".m3u8") || path.contains(".m3u8") -> MimeTypes.APPLICATION_M3U8
+                path.endsWith(".mp4") || path.contains(".mp4") -> MimeTypes.VIDEO_MP4
+                else -> null
+            }
+        }
+
+        private fun findExtractor(link: String, server: Video.Server?): Extractor? {
+            val host = hostOf(link)
+
+            // 1) Coincidencia exacta de host (o sufijo de host: `a.filemoon.site`).
+            registrations.firstOrNull { registration ->
+                registration.hosts.any { expected -> host == expected || host.endsWith(".$expected") }
+            }?.let { return it.extractor }
+
+            // 2) Coincidencia por dominio raíz (`filemoon.to` -> `filemoon`).
+            registrations.firstOrNull { registration ->
+                registration.rootDomains.any { root -> host.substringBefore('.') == root || host.contains(root) }
+            }?.let { return it.extractor }
+
+            // 3) Dominios rotatorios declarados por el extractor.
+            val compareUrl = link.lowercase()
+            registrations.firstOrNull { registration ->
+                registration.extractor.rotatingDomain.any { it.containsMatchIn(compareUrl) }
+            }?.let { return it.extractor }
+
+            // 4) Fallback por el nombre del servidor devuelto por el provider.
+            val serverName = server?.name?.lowercase().orEmpty()
+            if (serverName.isNotBlank()) {
+                registrations.firstOrNull { registration ->
+                    serverName.contains(registration.extractor.name.lowercase())
+                }?.let { return it.extractor }
+            }
+            return null
+        }
+
+        /**
+         * Nombre del extractor que atendería [link] (o `"direct"` si es un
+         * archivo multimedia servido tal cual). Pensado para diagnóstico y tests:
+         * permite comprobar que **cada** reproductor de un provider tiene resolver.
+         */
+        internal fun describe(link: String, server: Video.Server? = null): String? =
+            findExtractor(link, server)?.name ?: directMediaType(link)?.let { "direct" }
+
         suspend fun extract(link: String, server: Video.Server? = null): Video {
+            if (link.isBlank()) throw Exception("Empty video link")
+
             var finalLink = link
-            
-            // 1. RISOLUZIONE BRIDGE UNIVERSALE (StreamHG/Sync/Cuevana)
-            // Facciamo questo PRIMA di cercare l'estrattore perché il link bridge (es. mysync.mov)
-            // non appartiene a nessun estrattore specifico, ma il link risolto sì (es. filemoon).
+
+            // Bridge de los providers (mysync.mov) resuelto antes de buscar extractor.
             if (link.contains("mysync.mov/stream/")) {
-                try {
-                    val client = okhttp3.OkHttpClient.Builder()
-                        .followRedirects(true)
-                        .followSslRedirects(true)
-                        .build()
-                    
-                    val responseBody = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        val request = okhttp3.Request.Builder()
-                            .url(link)
-                            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-                            .build()
-                        client.newCall(request).execute().use { it.body?.string() }
-                    } ?: ""
-                    
-                    val redirectUrl = responseBody.substringAfter("window.location.replace(\"", "").substringBefore("\"")
-                        .ifEmpty { responseBody.substringAfter("window.location.href = \"", "").substringBefore("\"") }
-                        .ifEmpty { responseBody.substringAfter("src=\"", "").substringBefore("\"") }
-                    
-                    if (redirectUrl.isNotEmpty() && redirectUrl.startsWith("http")) {
-                        Log.d("Extractor", "Universal Bridge resolved: $link -> $redirectUrl")
-                        finalLink = redirectUrl
-                    }
-                } catch (e: Exception) {
-                    Log.e("Extractor", "Universal Bridge error: ${e.message}")
-                }
-            }
-
-            val urlRegex = Regex("^(https?://)?(www\\.)?")
-            val compareUrl = finalLink.lowercase().replace(urlRegex, "")
-
-            var foundExtractor: Extractor? = null
-
-            for (extractor in extractors) {
-                if (compareUrl.startsWith(extractor.mainUrl.replace(urlRegex, ""))) {
-                    foundExtractor = extractor
-                    break
-                } else {
-                    for (aliasUrl in extractor.aliasUrls) {
-                        if (compareUrl.startsWith(aliasUrl.lowercase().replace(urlRegex, ""))) {
-                            foundExtractor = extractor
-                            break
+                runCatching { resolveBridge(link) }
+                    .onSuccess { resolved ->
+                        if (!resolved.isNullOrBlank()) {
+                            Log.d(TAG, "Universal Bridge resolved: $link -> $resolved")
+                            finalLink = resolved
                         }
                     }
-                }
-                if (foundExtractor != null) break
+                    .onFailure { Log.w(TAG, "Universal Bridge error: ${it.message}") }
             }
 
-            if (foundExtractor == null) {
-                for (extractor in extractors) {
-                    if (compareUrl.startsWith(
-                            extractor.mainUrl.replace(
-                                Regex("^(https?://)?(www\\.)?(.*?)(\\.[a-z]+)"),
-                                "$3"
-                            )
-                        )
-                    ) {
-                        foundExtractor = extractor
-                        break
-                    } else {
-                        for (aliasUrl in extractor.aliasUrls) {
-                            if (compareUrl.startsWith(
-                                    aliasUrl.replace(
-                                        Regex("^(https?://)?(www\\.)?(.*?)(\\.[a-z]+)"),
-                                        "$3"
-                                    )
-                                )
-                            ) {
-                                foundExtractor = extractor
-                                break
-                            }
-                        }
-                    }
-                    if (foundExtractor != null) break
-                }
-            }
-
-            if (foundExtractor == null) {
-                for (extractor in extractors) {
-                    if (extractor.rotatingDomain.any { it.containsMatchIn(compareUrl) }) {
-                        foundExtractor = extractor
-                        break
-                    }
-                }
-            }
-
-            if (foundExtractor == null) {
-                for (extractor in extractors) {
-                    if ((server?.name?.lowercase() ?: "").contains(extractor.name.lowercase())) {
-                        foundExtractor = extractor
-                        break
-                    }
-                }
-            }
-
+            val foundExtractor = findExtractor(finalLink, server)
             if (foundExtractor != null) {
-                Log.i("StreamFlixES", "[EXTRACTOR] -> Starting: ${foundExtractor.name} (URL: $finalLink)")
-                val video = foundExtractor.extract(finalLink)
-                Log.i("StreamFlixES", "[VIDEO] -> Extracted: ${video.source}")
+                Log.i(TAG, "[EXTRACTOR] -> Starting: ${foundExtractor.name} (URL: $finalLink)")
+                // El servidor original se propaga: muchos extractores lo usan para
+                // rellenar subtítulos/títulos y para conservar el nombre visible.
+                val video = foundExtractor.extract(finalLink, server)
+                Log.i(TAG, "[VIDEO] -> Extracted: ${video.source}")
                 return video
+            }
+
+            // 5) Enlaces directos: sólo HLS (.m3u8) y MP4 se aceptan como stream.
+            directMediaType(finalLink)?.let { mediaType ->
+                Log.i(TAG, "[DIRECT] -> $finalLink")
+                return Video(source = finalLink, type = mediaType)
+            }
+
+            // 6) Último recurso: tratar el host desconocido como fuente empaquetada.
+            //    Evita el clásico "No extractors found" cuando el player es nuevo.
+            if (finalLink.startsWith("http")) {
+                Log.i(TAG, "[GENERIC] -> $finalLink")
+                runCatching { FallbackPackedExtractor(finalLink).extract(finalLink, server) }
+                    .onSuccess { return it }
+                    .onFailure { Log.w(TAG, "Generic extraction failed: ${it.message}") }
             }
 
             throw Exception("No extractors found for URL: $finalLink")

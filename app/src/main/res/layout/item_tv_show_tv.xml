@@ -9,6 +9,8 @@
     android:focusableInTouchMode="true">
 
     <ImageView
+        android:background="@drawable/bg_poster_rounded"
+        android:clipToOutline="true"
         android:id="@+id/iv_tv_show_poster"
         android:layout_width="0dp"
         android:layout_height="200dp"
@@ -35,6 +37,7 @@
         tools:progress="80" />
 
     <TextView
+        android:textAppearance="@style/TextAppearance.App.Badge"
         android:id="@+id/tv_tv_show_quality"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -66,6 +69,7 @@
         app:constraint_referenced_ids="tv_tv_show_quality,tv_tv_show_last_episode" />
 
     <TextView
+        android:textAppearance="@style/TextAppearance.App.Subtitle"
         android:id="@+id/tv_tv_show_title"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -75,7 +79,7 @@
         android:layout_marginBottom="8dp"
         android:ellipsize="end"
         android:lines="2"
-        android:textColor="#FFFFFF"
+        android:textColor="?android:attr/textColorPrimary"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
