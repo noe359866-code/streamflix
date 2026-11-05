@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<searchable xmlns:android="http://schemas.android.com/apk/res/android"
+    android:hint="@string/search_input_hint"
+    android:includeInGlobalSearch="true"
+    android:label="@string/app_name"
+    android:searchSettingsDescription="@string/app_name"
+    android:searchSuggestAuthority="@string/tv_search_authority"
+    android:searchSuggestIntentAction="android.intent.action.VIEW"
+    android:searchSuggestIntentData="streamflix://tv/media"
+    android:searchSuggestSelection=" ?"
+    android:searchSuggestThreshold="1"
+    android:voiceLanguageModel="free_form"
+    android:voiceSearchMode="showVoiceSearchButton|launchRecognizer" />

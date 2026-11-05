@@ -61,11 +61,13 @@ object UserPreferences {
     var currentProvider: Provider?
         get() {
             val providerName = Key.CURRENT_PROVIDER.getString()
-            if (providerName?.startsWith("TMDb (") == true && providerName.endsWith(")")) {
+                ?: return com.streamflixreborn.streamflix.providers.StremioUnifiedProvider
+            if (providerName.startsWith("TMDb (") && providerName.endsWith(")")) {
                 val lang = providerName.substringAfter("TMDb (").substringBefore(")")
                 return TmdbProvider(lang)
             }
             return Provider.providers.keys.find { it.name == providerName }
+                ?: com.streamflixreborn.streamflix.providers.StremioUnifiedProvider
         }
         set(value) {
             // CRITICO: Resetta l'istanza del database prima di cambiare provider

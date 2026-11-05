@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
     id 'androidx.navigation.safeargs.kotlin'
     id 'kotlin-parcelize'
     id 'com.google.devtools.ksp'
@@ -8,40 +9,36 @@ plugins {
 }
 
 android {
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-        coreLibraryDesugaringEnabled true
-    }
-}
-
-dependencies {
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
-}
-
-android {
     namespace 'com.streamflixreborn.streamflix'
     compileSdk 36
 
     def properties = new Properties()
-    properties.load(project.rootProject.file('local.properties').newDataInputStream())
+    def localPropertiesFile = project.rootProject.file('local.properties')
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.withInputStream { properties.load(it) }
+    }
+    def resolvedAppLayout = properties.getProperty("APP_LAYOUT", "tv")
 
     defaultConfig {
         applicationId "com.streamflixreborn.streamflix"
-        minSdk 21
+        minSdk 24
         targetSdk 35
         versionCode 145
         versionName "1.7.116"
 
-        buildConfigField "String", "APP_LAYOUT", "\"${properties.getProperty("APP_LAYOUT")}\""
-        buildConfigField "String", "TMDB_API_KEY", "\"${properties.getProperty("TMDB_API_KEY")}\""
-        buildConfigField "String", "SUBDL_API_KEY", "\"${properties.getProperty("SUBDL_API_KEY")}\""
-        buildConfigField "String", "RABBITSTREAM_SOURCE_API", "\"${properties.getProperty("RABBITSTREAM_SOURCE_API")}\""
+        buildConfigField "String", "APP_LAYOUT", "\"${resolvedAppLayout}\""
+        buildConfigField "String", "TMDB_API_KEY", "\"${properties.getProperty("TMDB_API_KEY", "")}\""
+        buildConfigField "String", "SUBDL_API_KEY", "\"${properties.getProperty("SUBDL_API_KEY", "")}\""
+        buildConfigField "String", "RABBITSTREAM_SOURCE_API", "\"${properties.getProperty("RABBITSTREAM_SOURCE_API", "")}\""
+        buildConfigField "String", "TRAKT_CLIENT_ID", "\"${properties.getProperty("TRAKT_CLIENT_ID", "")}\""
+        buildConfigField "String", "TRAKT_CLIENT_SECRET", "\"${properties.getProperty("TRAKT_CLIENT_SECRET", "")}\""
+        buildConfigField "String", "GITHUB_UPDATE_REPO", "\"${properties.getProperty("GITHUB_UPDATE_REPO", "noe359866-code/streamflix")}\""
+        resValue "string", "tv_search_authority", "com.streamflixreborn.streamflix.tvsearch"
     }
 
     sourceSets {
         main {
-            def appLayout = properties.getProperty("APP_LAYOUT")
+            def appLayout = resolvedAppLayout
             if (appLayout == "mobile") {
                 manifest.srcFile "${project.rootDir}/app/src/main/mobile/AndroidManifest.xml"
             } else if (appLayout == "tv") {
@@ -55,6 +52,7 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
     }
     kotlinOptions {
         jvmTarget = '17'
@@ -65,6 +63,7 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             applicationIdSuffix '.debug'
+            resValue "string", "tv_search_authority", "com.streamflixreborn.streamflix.debug.tvsearch"
         }
         release {
             minifyEnabled false
@@ -75,10 +74,46 @@ android {
     buildFeatures {
         viewBinding true
         buildConfig true
+        compose true
+    }
+
+    packaging {
+        resources {
+            excludes += [
+                'META-INF/INDEX.LIST',
+                'META-INF/DEPENDENCIES',
+                'META-INF/LICENSE',
+                'META-INF/LICENSE.txt',
+                'META-INF/LICENSE.md',
+                'META-INF/LICENSE-notice.md',
+                'META-INF/NOTICE',
+                'META-INF/NOTICE.txt',
+                'META-INF/io.netty.versions.properties'
+            ]
+        }
     }
 }
 
 dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+
+    implementation platform('androidx.compose:compose-bom:2025.08.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.ui:ui-graphics'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-extended'
+    implementation 'androidx.activity:activity-compose:1.10.1'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.7'
+    implementation 'androidx.tv:tv-foundation:1.0.0-alpha11'
+    implementation 'androidx.tv:tv-material:1.0.1'
+    implementation 'io.coil-kt:coil-compose:2.7.0'
+
+    implementation 'io.ktor:ktor-server-core-jvm:2.3.12'
+    implementation 'io.ktor:ktor-server-cio-jvm:2.3.12'
+
     implementation 'androidx.media3:media3-datasource-okhttp:1.8.0'
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
@@ -129,7 +164,6 @@ dependencies {
     implementation "org.nanohttpd:nanohttpd:2.3.1"
     implementation "com.google.zxing:core:3.5.1"
     implementation("org.java-websocket:Java-WebSocket:1.5.3")
-    
 }
 
 ksp {

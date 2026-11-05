@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import java.security.Security
 import org.conscrypt.Conscrypt
+import coil.ImageLoader
+import coil.ImageLoaderFactory
 import com.streamflixreborn.streamflix.database.AppDatabase
 import com.streamflixreborn.streamflix.providers.AniWorldProvider
 import com.streamflixreborn.streamflix.providers.SerienStreamProvider
@@ -13,13 +15,14 @@ import com.streamflixreborn.streamflix.utils.ArtworkRepairScheduler
 import com.streamflixreborn.streamflix.utils.CacheUtils
 import com.streamflixreborn.streamflix.utils.DnsResolver
 import com.streamflixreborn.streamflix.utils.IsrgRootTrustProvider
+import com.streamflixreborn.streamflix.utils.TvImageOptimizer
 import com.streamflixreborn.streamflix.utils.UserPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-class StreamFlixApp : Application() {
+class StreamFlixApp : Application(), ImageLoaderFactory {
     companion object {
         lateinit var instance: StreamFlixApp
             private set
@@ -57,6 +60,10 @@ class StreamFlixApp : Application() {
             ArtworkRepairScheduler.schedule(appContext, UserPreferences.currentProvider)
             CacheUtils.autoClearIfNeeded(appContext, thresholdMb = threshold)
         }
+    }
+
+    override fun newImageLoader(): ImageLoader {
+        return TvImageOptimizer.createImageLoader(this)
     }
 
     override fun onTrimMemory(level: Int) {

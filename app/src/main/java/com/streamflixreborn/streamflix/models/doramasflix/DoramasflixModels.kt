@@ -13,6 +13,11 @@ data class Data(
     val searchMovie: List<Show>? = null,
     val listSeasons: List<Season>? = null,
     val listEpisodes: List<Episode>? = null,
+    val detailMovie: Show? = null,
+    val detailDorama: Show? = null,
+    val detailEpisode: Episode? = null,
+    val getEpisodeLinks: Episode? = null,
+    val getMovieLinks: Show? = null,
 )
 
 data class Pagination(
@@ -33,7 +38,9 @@ data class Show(
     val poster: String? = null,
     val genres: List<Genre> = emptyList(),
     @SerializedName("__typename")
-    val typename: String,
+    val typename: String? = null,
+    @SerializedName("links_online")
+    val linksOnline: List<LinkOnline>? = null,
 )
 
 data class Genre(
@@ -55,18 +62,25 @@ data class Season(
 
 data class Episode(
     @SerializedName("_id")
-    val id: String,
-    val name: String?,
-    val slug: String,
+    val id: String? = null,
+    val name: String? = null,
+    val slug: String? = null,
     @SerializedName("episode_number")
-    val episodeNumber: Int?,
+    val episodeNumber: Int? = null,
     @SerializedName("season_number")
-    val seasonNumber: Int?,
+    val seasonNumber: Int? = null,
     @SerializedName("still_path")
     val stillPath: String? = null,
+    @SerializedName("links_online")
+    val linksOnline: List<LinkOnline>? = null,
 )
 
-// --- MODELOS PARA EL TOKEN DE FKPLAYER ---
+data class LinkOnline(
+    val lang: String? = null,
+    val link: String? = null,
+    val embed: String? = null,
+)
+
 data class TokenModel(
     val props: PropsToken? = null,
 )

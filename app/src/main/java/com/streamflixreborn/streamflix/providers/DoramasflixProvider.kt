@@ -2,23 +2,28 @@ package com.streamflixreborn.streamflix.providers
 
 import android.util.Base64
 import com.google.gson.Gson
-import com.google.gson.JsonParser
-import com.tanasi.retrofit_jsoup.converter.JsoupConverterFactory
 import com.streamflixreborn.streamflix.adapters.AppAdapter
 import com.streamflixreborn.streamflix.extractors.Extractor
-import com.streamflixreborn.streamflix.models.*
+import com.streamflixreborn.streamflix.models.Category
+import com.streamflixreborn.streamflix.models.Episode
+import com.streamflixreborn.streamflix.models.Genre
+import com.streamflixreborn.streamflix.models.Movie
+import com.streamflixreborn.streamflix.models.People
+import com.streamflixreborn.streamflix.models.Season
+import com.streamflixreborn.streamflix.models.Show
+import com.streamflixreborn.streamflix.models.TvShow
+import com.streamflixreborn.streamflix.models.Video
 import com.streamflixreborn.streamflix.models.doramasflix.ApiResponse
+import com.streamflixreborn.streamflix.models.doramasflix.LinkOnline
 import com.streamflixreborn.streamflix.models.doramasflix.TokenModel
 import com.streamflixreborn.streamflix.models.doramasflix.VideoToken
 import com.streamflixreborn.streamflix.utils.DnsResolver
+import com.tanasi.retrofit_jsoup.converter.JsoupConverterFactory
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import okhttp3.Cache
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.dnsoverhttps.DnsOverHttps
 import org.jsoup.nodes.Document
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -27,7 +32,6 @@ import retrofit2.http.GET
 import retrofit2.http.Headers
 import retrofit2.http.POST
 import retrofit2.http.Url
-import java.io.File
 import java.net.URL
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -56,14 +60,13 @@ object DoramasflixProvider : Provider {
         .create(DoramasflixService::class.java)
 
     private fun getOkHttpClient(): OkHttpClient {
-        val appCache = Cache(File("cacheDir", "okhttpcache"), 10 * 1024 * 1024)
-
-        val clientBuilder = OkHttpClient.Builder()
-            .cache(appCache)
+        // No disk cache: Android TV working dir "/" is read-only, OkHttp cache must remain in-memory only
+        // to avoid FileNotFound / IOException on leanback devices.
+        return OkHttpClient.Builder()
             .readTimeout(30, TimeUnit.SECONDS)
             .connectTimeout(30, TimeUnit.SECONDS)
-
-        return clientBuilder.dns(DnsResolver.doh).build()
+            .dns(DnsResolver.doh)
+            .build()
     }
 
     private const val accessPlatform = "RxARncfg1S_MdpSrCvreoLu_SikCGMzE1NzQzODc3NjE2MQ=="
@@ -144,14 +147,13 @@ object DoramasflixProvider : Provider {
                     }
                 }
 
-                val categories = mutableListOf(
+                mutableListOf(
                     Category(name = Category.FEATURED, list = bannerShows),
                     Category(name = "Doramas Populares", list = popularDoramasDeferred.await()),
                     Category(name = "Películas Populares", list = popularMoviesDeferred.await())
                 )
-                categories
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             emptyList()
         }
     }
@@ -195,7 +197,7 @@ object DoramasflixProvider : Provider {
             }
 
             results
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             emptyList()
         }
     }
@@ -215,7 +217,7 @@ object DoramasflixProvider : Provider {
                     poster = getPosterUrl(it.posterPath ?: it.poster)
                 )
             } ?: emptyList()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             emptyList()
         }
     }
@@ -235,31 +237,40 @@ object DoramasflixProvider : Provider {
                     poster = getPosterUrl(it.posterPath ?: it.poster)
                 )
             } ?: emptyList()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             emptyList()
         }
     }
 
+    private fun cleanSlugOrId(id: String): String {
+        return id.removePrefix(baseUrl)
+            .removePrefix("https://doramasflix.in")
+            .removePrefix("/")
+            .removePrefix("peliculas-online/")
+            .removePrefix("doramas-online/")
+            .removePrefix("dorama/")
+            .removePrefix("pelicula/")
+            .removePrefix("series/")
+            .trim('/')
+    }
+
     override suspend fun getMovie(id: String): Movie {
         return try {
-            val url = if (id.startsWith("http")) id else "$baseUrl/$id"
-            val document = serviceHtml.getPage(url)
-            val script = document.selectFirst("script#__NEXT_DATA__")?.data()
-                ?: throw Exception("No se pudo encontrar el script de datos.")
-
-            val jsonObject = JsonParser.parseString(script).asJsonObject
-            val apolloState = jsonObject.getAsJsonObject("props")
-                .getAsJsonObject("pageProps")
-                .getAsJsonObject("apolloState")
-
-            val movieData = apolloState.entrySet().firstOrNull { (key, _) -> key.startsWith("Movie:") }?.value?.asJsonObject
-                ?: throw Exception("No se encontraron datos de la película en el JSON.")
+            val cleanId = cleanSlugOrId(id)
+            val filterField = if (cleanId.matches(Regex("^[0-9a-fA-F]{24}$"))) "_id" else "slug"
+            val movieQuery = """
+                {"operationName":"detailMovie","variables":{"filter":{"$filterField":"$cleanId"}},"query":"query detailMovie(${'$'}filter: FilterFindOneMovieInput) {\n  detailMovie(filter: ${'$'}filter) {\n    _id\n    name\n    name_es\n    slug\n    overview\n    poster_path\n    poster\n    __typename\n  }\n}\n"}
+            """.trimIndent()
+            val movieBody = movieQuery.toRequestBody("application/json".toMediaType())
+            val response = service.getApiResponse(movieBody)
+            val movieData = response.data?.detailMovie
+                ?: throw Exception("No se encontraron datos de la película en la API.")
 
             Movie(
-                id = movieData.get("_id").asString,
-                title = "${movieData.get("name").asString} (${movieData.get("name_es")?.asString ?: ""})".trim(),
-                overview = movieData.get("overview")?.asString,
-                poster = getPosterUrl(movieData.get("poster_path")?.asString ?: movieData.get("poster")?.asString),
+                id = movieData.id,
+                title = "${movieData.name} (${movieData.nameEs ?: ""})".trim(),
+                overview = movieData.overview,
+                poster = getPosterUrl(movieData.posterPath ?: movieData.poster),
             )
         } catch (e: Exception) {
             throw Exception("No se pudieron cargar los detalles de la película: ${e.message}")
@@ -268,20 +279,17 @@ object DoramasflixProvider : Provider {
 
     override suspend fun getTvShow(id: String): TvShow {
         return try {
-            val url = if (id.startsWith("http")) id else "$baseUrl/$id"
-            val document = serviceHtml.getPage(url)
-            val script = document.selectFirst("script#__NEXT_DATA__")?.data()
-                ?: throw Exception("No se pudo encontrar el script de datos.")
+            val cleanId = cleanSlugOrId(id)
+            val filterField = if (cleanId.matches(Regex("^[0-9a-fA-F]{24}$"))) "_id" else "slug"
+            val doramaQuery = """
+                {"operationName":"detailDorama","variables":{"filter":{"$filterField":"$cleanId"}},"query":"query detailDorama(${'$'}filter: FilterFindOneDoramaInput) {\n  detailDorama(filter: ${'$'}filter) {\n    _id\n    name\n    name_es\n    slug\n    overview\n    poster_path\n    poster\n    __typename\n  }\n}\n"}
+            """.trimIndent()
+            val doramaBody = doramaQuery.toRequestBody("application/json".toMediaType())
+            val response = service.getApiResponse(doramaBody)
+            val doramaData = response.data?.detailDorama
+                ?: throw Exception("No se encontraron datos del dorama en la API.")
 
-            val jsonObject = JsonParser.parseString(script).asJsonObject
-            val apolloState = jsonObject.getAsJsonObject("props")
-                .getAsJsonObject("pageProps")
-                .getAsJsonObject("apolloState")
-
-            val doramaData = apolloState.entrySet().firstOrNull { (key, _) -> key.startsWith("Dorama:") || key.startsWith("Movie:") }?.value?.asJsonObject
-                ?: throw Exception("No se encontraron datos del dorama en el JSON.")
-
-            val doramaId = doramaData.get("_id").asString
+            val doramaId = doramaData.id
 
             val seasonQuery = """
                 {"operationName":"listSeasons","variables":{"serie_id":"$doramaId"},"query":"query listSeasons(${'$'}serie_id: MongoID!) {\n  listSeasons(sort: NUMBER_ASC, filter: {serie_id: ${'$'}serie_id}) {\n    slug\n    season_number\n    poster_path\n    __typename\n  }\n}\n"}
@@ -300,9 +308,9 @@ object DoramasflixProvider : Provider {
 
             TvShow(
                 id = doramaId,
-                title = "${doramaData.get("name").asString} (${doramaData.get("name_es")?.asString ?: ""})".trim(),
-                overview = doramaData.get("overview")?.asString,
-                poster = getPosterUrl(doramaData.get("poster_path")?.asString ?: doramaData.get("poster")?.asString),
+                title = "${doramaData.name} (${doramaData.nameEs ?: ""})".trim(),
+                overview = doramaData.overview,
+                poster = getPosterUrl(doramaData.posterPath ?: doramaData.poster),
                 seasons = seasons
             )
         } catch (e: Exception) {
@@ -323,70 +331,86 @@ object DoramasflixProvider : Provider {
             val response = service.getApiResponse(body)
             response.data?.listEpisodes?.map {
                 Episode(
-                    id = it.slug,
+                    id = it.slug ?: "",
                     number = it.episodeNumber ?: 0,
                     title = "Episodio ${it.episodeNumber ?: 0}: ${it.name ?: ""}".trim(),
                     poster = getPosterUrl(it.stillPath)
                 )
             } ?: emptyList()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             emptyList()
         }
     }
 
     override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> {
-        try {
-            val url = when (videoType) {
-                is Video.Type.Movie -> "$baseUrl/$id"
-                is Video.Type.Episode -> "$baseUrl/episodios/$id"
-            }
+        return try {
+            val cleanId = cleanSlugOrId(id)
+            val allLinks = mutableListOf<LinkOnline>()
+            val seenUrls = mutableSetOf<String>()
 
-            val document = serviceHtml.getPage(url)
-            val script = document.selectFirst("script#__NEXT_DATA__")?.data()
-                ?: return emptyList()
-
-            val jsonObject = JsonParser.parseString(script).asJsonObject
-            val apolloState = jsonObject.getAsJsonObject("props")
-                .getAsJsonObject("pageProps")
-                .getAsJsonObject("apolloState")
-
-            val mediaData = apolloState.entrySet().firstOrNull { (key, _) ->
-                key.startsWith("Episode:") || key.startsWith("Movie:")
-            }?.value?.asJsonObject
-
-            val linksOnline = mediaData?.getAsJsonObject("links_online")?.getAsJsonArray("json")
-
-            if (linksOnline != null && linksOnline.size() > 0) {
-                return linksOnline.mapNotNull { serverElement ->
-                    val serverObject = serverElement.asJsonObject
-                    val serverUrl = serverObject.get("link")?.asString ?: return@mapNotNull null
-                    val lang = serverObject.get("lang")?.asString?.getLang() ?: ""
-                    val serverName = URL(serverUrl).host.split(".").first { it != "www" }.replaceFirstChar { it.titlecase(Locale.ROOT) }
-
-                    val finalUrl = getRealLink(serverUrl)
-                    Video.Server(id = finalUrl, name = "$serverName $lang".trim())
+            fun addLinks(links: List<LinkOnline>?) {
+                links?.forEach { item ->
+                    val url = item.embed?.takeIf { it.isNotBlank() } ?: item.link
+                    if (!url.isNullOrBlank() && !url.endsWith("/e/") && seenUrls.add(url)) {
+                        allLinks.add(item)
+                    }
                 }
             }
 
-            val problems = apolloState.entrySet()
-                .filter { (key, _) -> key.startsWith("ROOT_QUERY.listProblems") }
-                .map { it.value }
+            when (videoType) {
+                is Video.Type.Movie -> {
+                    val filterField = if (cleanId.matches(Regex("^[0-9a-fA-F]{24}$"))) "_id" else "slug"
+                    val detailMovieQuery = """
+                        {"operationName":"detailMovie","variables":{"filter":{"$filterField":"$cleanId"}},"query":"query detailMovie(${'$'}filter: FilterFindOneMovieInput) {\n  detailMovie(filter: ${'$'}filter) {\n    _id\n    links_online\n  }\n}\n"}
+                    """.trimIndent()
+                    val detRes = service.getApiResponse(detailMovieQuery.toRequestBody("application/json".toMediaType()))
+                    addLinks(detRes.data?.detailMovie?.linksOnline)
 
-            return problems.mapNotNull { problemElement ->
-                val serverData = problemElement.asJsonObject
-                    .getAsJsonObject("server")
-                    ?.getAsJsonObject("json")
+                    val getMovieLinksQuery = """
+                        {"operationName":"getMovieLinks","variables":{"slug":"$cleanId"},"query":"query getMovieLinks(${'$'}slug: String) {\n  getMovieLinks(slug: ${'$'}slug) {\n    _id\n    links_online\n  }\n}\n"}
+                    """.trimIndent()
+                    val gmlRes = service.getApiResponse(getMovieLinksQuery.toRequestBody("application/json".toMediaType()))
+                    addLinks(gmlRes.data?.getMovieLinks?.linksOnline)
+                }
+                is Video.Type.Episode -> {
+                    var epId = cleanId
+                    val filterField = if (cleanId.matches(Regex("^[0-9a-fA-F]{24}$"))) "_id" else "slug"
+                    val detailEpisodeQuery = """
+                        {"operationName":"detailEpisode","variables":{"filter":{"$filterField":"$cleanId"}},"query":"query detailEpisode(${'$'}filter: FilterFindOneEpisodeInput) {\n  detailEpisode(filter: ${'$'}filter) {\n    _id\n    links_online\n  }\n}\n"}
+                    """.trimIndent()
+                    val detRes = service.getApiResponse(detailEpisodeQuery.toRequestBody("application/json".toMediaType()))
+                    val epObj = detRes.data?.detailEpisode
+                    if (!epObj?.id.isNullOrBlank()) {
+                        epId = epObj!!.id!!
+                    }
+                    addLinks(epObj?.linksOnline)
 
-                val serverUrl = serverData?.get("link")?.asString ?: return@mapNotNull null
-                val lang = serverData.get("lang")?.asString?.getLang() ?: ""
-                val serverName = URL(serverUrl).host.split(".").first { it != "www" }.replaceFirstChar { it.titlecase(Locale.ROOT) }
+                    if (epId.matches(Regex("^[0-9a-fA-F]{24}$"))) {
+                        val getEpisodeLinksQuery = """
+                            {"operationName":"getEpisodeLinks","variables":{"id":"$epId"},"query":"query getEpisodeLinks(${'$'}id: MongoID!) {\n  getEpisodeLinks(id: ${'$'}id) {\n    _id\n    links_online\n  }\n}\n"}
+                        """.trimIndent()
+                        val gelRes = service.getApiResponse(getEpisodeLinksQuery.toRequestBody("application/json".toMediaType()))
+                        addLinks(gelRes.data?.getEpisodeLinks?.linksOnline)
+                    }
+                }
+            }
 
-                val finalUrl = getRealLink(serverUrl)
+            allLinks.mapNotNull { item ->
+                val embedUrl = item.embed?.takeIf { it.isNotBlank() } ?: item.link ?: return@mapNotNull null
+                if (embedUrl.endsWith("/e/")) return@mapNotNull null
+
+                val lang = item.lang?.getLang() ?: ""
+                val serverName = try {
+                    URL(embedUrl).host.split(".").first { it != "www" }.replaceFirstChar { it.titlecase(Locale.ROOT) }
+                } catch (_: Exception) {
+                    "Server"
+                }
+
+                val finalUrl = getRealLink(embedUrl)
                 Video.Server(id = finalUrl, name = "$serverName $lang".trim())
             }.distinctBy { it.id }
-
-        } catch (e: Exception) {
-            return emptyList()
+        } catch (_: Exception) {
+            emptyList()
         }
     }
 
@@ -404,13 +428,13 @@ object DoramasflixProvider : Provider {
 
             val videoResponse = service.postApi("https://fkplayer.xyz/api/decoding", requestBody)
             String(Base64.decode(videoResponse.link, Base64.DEFAULT))
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             link
         }
     }
 
     override suspend fun getVideo(server: Video.Server): Video = Extractor.extract(server.id, server)
-    override val logo: String = "https://doramasflix.in/img/logo.png"
+    override val logo: String = "https://assets.seriesapi.co/brands/doramasflix/websites/6a651fa138cbd16df74343be/logo/logo-1785013866419.png"
 
     override suspend fun getGenre(id: String, page: Int): Genre {
         val list: List<Show> = when (id) {

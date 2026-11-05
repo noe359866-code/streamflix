@@ -58,6 +58,9 @@ interface Provider {
         )
 
         val providers = mapOf(
+            StremioUnifiedProvider to ProviderSupport(movies = true, tvShows = true),
+            CineHaxProvider to ProviderSupport(movies = true, tvShows = true),
+            GnulaProvider to ProviderSupport(movies = true, tvShows = true),
             SflixProvider to ProviderSupport(movies = true, tvShows = true),
             SerienStreamProvider to ProviderSupport(movies = false, tvShows = true),
             StreamingCommunityProvider("it") to ProviderSupport(movies = true, tvShows = true),
@@ -78,11 +81,11 @@ interface Provider {
             LaCartoonsProvider to ProviderSupport(movies = false, tvShows = true),
             AnimefenixProvider to ProviderSupport(movies = false, tvShows = true),
             AnimeFlvProvider to ProviderSupport(movies = false, tvShows = true),
-            AnimeAv1Provider to ProviderSupport(movies = false, tvShows = true),
+            AnimeAv1Provider to ProviderSupport(movies = true, tvShows = true),
+            AnimeBumProvider to ProviderSupport(movies = true, tvShows = true),
             SoloLatinoProvider to ProviderSupport(movies = true, tvShows = true),
             Cine24hProvider to ProviderSupport(movies = true, tvShows = true),
             PelisplustoProvider to ProviderSupport(movies = true, tvShows = true),
-            CableVisionHDProvider to ProviderSupport(movies = false, tvShows = true),
             StreamingItaProvider to ProviderSupport(movies = true, tvShows = true),
             Altadefinizione01Provider to ProviderSupport(movies = true, tvShows = true),
             GuardaFlixProvider to ProviderSupport(movies = true, tvShows = false),
@@ -97,14 +100,10 @@ interface Provider {
             FilmyOnlineCcProvider to ProviderSupport(movies = true, tvShows = true),
             ZeriunProvider to ProviderSupport(movies = true, tvShows = true),
             UnJourUnFilmProvider to ProviderSupport(movies = true, tvShows = true),
-            TvporinternetHDProvider to ProviderSupport(movies = false, tvShows = true),
             FrembedProvider to ProviderSupport(movies = true, tvShows = true),
             AfterDarkProvider to ProviderSupport(movies = true, tvShows = true),
             KidrazProvider to ProviderSupport(movies = true, tvShows = false),
             FrenchMangaProvider to ProviderSupport(movies = false, tvShows = true),
-            IptvOrgProvider to ProviderSupport(movies = false, tvShows = true),
-            IptvSpainProvider to ProviderSupport(movies = false, tvShows = true),
-            TvLibrefutbolProvider to ProviderSupport(movies = false, tvShows = true)
         )
 
         // Helper functions to check support

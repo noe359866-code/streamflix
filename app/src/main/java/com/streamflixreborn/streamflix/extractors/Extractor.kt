@@ -111,6 +111,7 @@ abstract class Extractor {
             ZillaExtractor(),
             PDrainExtractor(),
             MaxstreamExtractor(),
+            MovieMasterExtractor(),
         )
 
         suspend fun extract(link: String, server: Video.Server? = null): Video {

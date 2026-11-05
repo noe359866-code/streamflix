@@ -16,6 +16,7 @@ import com.streamflixreborn.streamflix.models.TvShow
 import com.streamflixreborn.streamflix.models.Video
 import com.streamflixreborn.streamflix.utils.DnsResolver
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import okhttp3.OkHttpClient
 import org.json.JSONObject
@@ -313,35 +314,61 @@ object PelisplustoProvider : Provider {
             val document = service.getPage(url)
             val serverElements = document.select(".bg-tabs ul li")
 
-            val servers = mutableListOf<Video.Server>()
-            for (li in serverElements) {
-                try {
-                    val serverName = li.text().replace(" Reproducir", "")
-                    val dataServer = li.attr("data-server")
-                    if (dataServer.isEmpty()) continue
+            return coroutineScope {
+                serverElements.map { li ->
+                    async {
+                        try {
+                            val serverName = li.text().replace(" Reproducir", "").trim()
+                            val dataServer = li.attr("data-server")
+                            if (dataServer.isEmpty()) return@async null
 
-                    val decodedUrl = String(Base64.decode(dataServer, Base64.DEFAULT))
+                            val parentLangHint = buildString {
+                                append(li.attr("data-lang"))
+                                append(" ")
+                                append(li.parent()?.id().orEmpty())
+                                append(" ")
+                                append(li.parent()?.className().orEmpty())
+                                append(" ")
+                                append(li.parents().firstOrNull { it.hasClass("tab-pane") || it.id().isNotEmpty() }?.id().orEmpty())
+                                append(" ")
+                                append(serverName)
+                            }.lowercase()
 
-                    val finalUrl = if (!decodedUrl.contains("https://")) {
-                        val reEncoded = String(Base64.encode(dataServer.toByteArray(), Base64.DEFAULT)).trim()
-                        val playerUrl = "$baseUrl/player/$reEncoded"
-                        val playerDoc = service.getPage(playerUrl)
+                            val langTag = when {
+                                parentLangHint.contains("sub") ||
+                                    parentLangHint.contains("vose") ||
+                                    parentLangHint.contains("eng") ||
+                                    parentLangHint.contains("ingl") -> "[SUB]"
+                                parentLangHint.contains("cast") ||
+                                    parentLangHint.contains("esp") -> "[CAST]"
+                                else -> "[LAT]"
+                            }
 
-                        playerDoc.selectFirst("script:containsData(window.onload)")?.data()
-                            ?.let { Regex("""(https?://[^\s'"]+)""").find(it)?.groupValues?.get(1) }
-                    } else {
-                        decodedUrl
+                            val decodedUrl = String(Base64.decode(dataServer, Base64.DEFAULT))
+
+                            val finalUrl = if (!decodedUrl.contains("https://")) {
+                                val reEncoded = String(Base64.encode(dataServer.toByteArray(), Base64.DEFAULT)).trim()
+                                val playerUrl = "$baseUrl/player/$reEncoded"
+                                val playerDoc = service.getPage(playerUrl)
+
+                                playerDoc.selectFirst("script:containsData(window.onload)")?.data()
+                                    ?.let { Regex("""(https?://[^\s'"]+)""").find(it)?.groupValues?.get(1) }
+                            } else {
+                                decodedUrl
+                            }
+
+                            if (!finalUrl.isNullOrEmpty()) {
+                                Video.Server(id = finalUrl, name = "$serverName $langTag", src = finalUrl)
+                            } else {
+                                null
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Fallo procesando un servidor individual: ${e.message}")
+                            null
+                        }
                     }
-
-                    if (!finalUrl.isNullOrEmpty()) {
-                        servers.add(Video.Server(id = finalUrl, name = "$serverName [LAT]", src = finalUrl))
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Fallo procesando un servidor individual: ${e.message}")
-                }
-                delay(4000L)
+                }.awaitAll().filterNotNull()
             }
-            return servers
 
         } catch (e: Exception) {
             Log.e(TAG, "Fallo crítico en getServers: ${e.message}")
