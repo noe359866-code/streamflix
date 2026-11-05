@@ -28,10 +28,43 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build Debug APK
+        id: build
         run: |
           set -o pipefail
-          ./gradlew assembleDebug --stacktrace --info 2>&1 | tee gradle-build.log
-          echo "Gradle exit code: ${PIPESTATUS[0]}"
+          ./gradlew assembleDebug --stacktrace 2>&1 | tee gradle-build.log
+          EC=${PIPESTATUS[0]}
+          echo "exit_code=$EC" >> $GITHUB_OUTPUT
+          if [ "$EC" != "0" ]; then
+            echo "::error::Gradle assembleDebug FAILED with exit $EC"
+            echo "===== TAIL 200 LINES ====="
+            tail -n 200 gradle-build.log || true
+            echo "===== GREP FAILED / error: ====="
+            grep -i -E "FAILED|error:|e: " gradle-build.log | head -n 100 || true
+            exit $EC
+          fi
+
+      - name: Publish Gradle log to debug branch (always)
+        if: always()
+        run: |
+          set +e
+          echo "Publishing gradle log to debug branch for sandbox fetch..."
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Save log even if build succeeded
+          cp gradle-build.log /tmp/gradle-build.log 2>/dev/null || echo "no log" > /tmp/gradle-build.log
+          tail -n 2000 /tmp/gradle-build.log > /tmp/gradle-tail.log 2>/dev/null || true
+          # Push to dedicated CI log branch
+          git fetch origin arena/f3c71883-streamflix-ci-log 2>/dev/null || true
+          git checkout --orphan ci-log-tmp
+          git rm -rf . 2>/dev/null || true
+          cp /tmp/gradle-build.log ./gradle-build.log 2>/dev/null || true
+          cp /tmp/gradle-tail.log ./gradle-tail.log 2>/dev/null || true
+          echo "Run: $GITHUB_RUN_ID" > run-id.txt
+          echo "Ref: $GITHUB_REF" >> run-id.txt
+          git add gradle-build.log gradle-tail.log run-id.txt
+          git commit -m "ci: gradle log for run $GITHUB_RUN_ID (exit ${{ steps.build.outputs.exit_code || 'unknown' }})" || true
+          git push origin HEAD:arena/f3c71883-streamflix-ci-log --force
+          echo "Pushed log branch"
 
       - name: Upload Gradle log
         if: always()
