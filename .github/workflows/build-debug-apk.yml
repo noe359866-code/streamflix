@@ -7,17 +7,21 @@ on:
       - 'main'
     paths-ignore:
       - '**.md'
-      - 'gradle-build.log'
-      - 'gradle-tail.log'
   workflow_dispatch:
 
 jobs:
   build-debug:
     name: Build Debug APK (Android TV VOD)
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      gists: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -36,35 +40,43 @@ jobs:
           ./gradlew assembleDebug --stacktrace 2>&1 | tee gradle-build.log
           EC=${PIPESTATUS[0]}
           echo "exit_code=$EC" >> $GITHUB_OUTPUT
-          tail -n 300 gradle-build.log > gradle-tail.log || true
+          tail -n 800 gradle-build.log > gradle-tail.log || true
           if [ "$EC" != "0" ]; then
             echo "::error::Gradle assembleDebug FAILED with exit $EC"
             echo "===== TAIL 200 LINES ====="
             tail -n 200 gradle-build.log || true
             echo "===== GREP FAILED / error: ====="
-            grep -i -E "FAILED|error:|e: " gradle-build.log | head -n 80 || true
+            grep -i -E "FAILED|error:|e: " gradle-build.log | head -n 120 || true
             exit $EC
           fi
 
-      - name: Publish Gradle log to repo (for sandbox fetch)
+      - name: Publish Gradle log via Gist and Issue
         if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set +e
+          set -x
+          ls -lh gradle-build.log gradle-tail.log || true
+          wc -l gradle-build.log gradle-tail.log || true
+          echo "Attempting to create GitHub Issue with log..."
+          BODY_FILE=/tmp/issue_body.md
+          echo "### Gradle Build Log for run $GITHUB_RUN_ID (exit ${{ steps.build.outputs.exit_code || 'unknown' }})" > $BODY_FILE
+          echo "" >> $BODY_FILE
+          echo '```' >> $BODY_FILE
+          tail -n 400 gradle-build.log >> $BODY_FILE || echo "no log" >> $BODY_FILE
+          echo '```' >> $BODY_FILE
+          gh issue create --title "CI log $GITHUB_RUN_ID" --body-file $BODY_FILE --repo ${{ github.repository }} || echo "issue create failed"
+          echo "Attempting to push log to branch..."
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Ensure we are on the correct branch
-          git fetch origin ${{ github.ref_name }} 2>/dev/null || true
-          # Copy logs to repo root (they are already there, but ensure tail exists)
-          ls -lh gradle-build.log gradle-tail.log 2>/dev/null || true
-          git add -f gradle-build.log gradle-tail.log 2>/dev/null || true
-          git status --short
-          if git diff --cached --quiet; then
-            echo "No log changes to commit"
-            exit 0
-          fi
-          git commit -m "[skip ci] ci: gradle log for run $GITHUB_RUN_ID (exit ${{ steps.build.outputs.exit_code || 'unknown' }})"
-          git push origin HEAD:${{ github.ref_name }}
-          echo "Pushed log"
+          git checkout -B arena-ci-log-publish
+          cp /tmp/issue_body.md ./ci-log-$GITHUB_RUN_ID.md 2>/dev/null || cp gradle-tail.log ./ci-log-$GITHUB_RUN_ID.md 2>/dev/null || true
+          cp gradle-build.log ./gradle-build.log 2>/dev/null || true
+          cp gradle-tail.log ./gradle-tail.log 2>/dev/null || true
+          git add -f gradle-build.log gradle-tail.log ci-log-$GITHUB_RUN_ID.md 2>/dev/null || true
+          git status
+          git commit -m "[skip ci] ci log $GITHUB_RUN_ID" || echo "nothing to commit"
+          git push origin HEAD:arena/f3c71883-streamflix-ci-log --force || echo "push failed"
 
       - name: Upload Gradle log
         if: always()
